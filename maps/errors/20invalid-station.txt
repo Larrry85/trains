@@ -1,0 +1,3 @@
+go run main.go maps/01london.txt waterlooo victoria 4
+
+go run main.go maps/01london.txt waterloo victoriaa 4

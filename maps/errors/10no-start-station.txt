@@ -1,0 +1,3 @@
+go run main.go maps/01london.txt victoria 4
+
+go run main.go maps/errors/10no-start-station_london.txt waterloo victoria 4
