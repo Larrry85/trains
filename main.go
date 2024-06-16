@@ -77,75 +77,77 @@ func main() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ReadNetwork reads and parses the network map from a file
 func ReadNetwork(filePath string) (Network, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return Network{}, err
-	}
-	defer file.Close()
+    file, err := os.Open(filePath)
+    if err != nil {
+        return Network{}, err
+    }
+    defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	network := Network{
-		Stations:    make(map[string]Station),
-		Connections: make(map[string][]string),
-	}
-	section := ""
+    scanner := bufio.NewScanner(file)
+    network := Network{
+        Stations:    make(map[string]Station),
+        Connections: make(map[string][]string),
+    }
+    section := ""
 
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		if line == "stations:" {
-			section = "stations"
-			continue
-		}
-		if line == "connections:" {
-			section = "connections"
-			continue
-		}
+    for scanner.Scan() {
+        line := strings.TrimSpace(scanner.Text())
+        if line == "" || strings.HasPrefix(line, "#") {
+            continue
+        }
+        if line == "stations:" {
+            section = "stations"
+            continue
+        }
+        if line == "connections:" {
+            section = "connections"
+            continue
+        }
 
-		switch section {
-		case "stations":
-			parts := strings.Split(line, ",")
-			if len(parts) != 3 {
-				return Network{}, errors.New("invalid station format")
-			}
-			name := strings.TrimSpace(parts[0])
-			x, err1 := strconv.Atoi(strings.TrimSpace(parts[1]))
-			y, err2 := strconv.Atoi(strings.TrimSpace(parts[2]))
-			if err1 != nil || err2 != nil || x <= 0 || y <= 0 {
-				return Network{}, errors.New("invalid station coordinates")
-			}
-			if _, exists := network.Stations[name]; exists {
-				return Network{}, errors.New("duplicate station name")
-			}
-			network.Stations[name] = Station{name, x, y}
+        switch section {
+        case "stations":
+            parts := strings.Split(line, ",")
+            if len(parts) != 3 {
+                return Network{}, errors.New("invalid station format")
+            }
+            name := strings.TrimSpace(parts[0])
+            x, err1 := strconv.Atoi(strings.TrimSpace(parts[1]))
+            y, err2 := strconv.Atoi(strings.TrimSpace(parts[2]))
+            if err1 != nil || err2 != nil || x < 0 || y < 0 {
+                return Network{}, errors.New("invalid station coordinates")
+            }
+            if _, exists := network.Stations[name]; exists {
+                return Network{}, errors.New("duplicate station name")
+            }
+            network.Stations[name] = Station{name, x, y}
 
-		case "connections":
-			parts := strings.Split(line, "-")
-			if len(parts) != 2 {
-				return Network{}, errors.New("invalid connection format")
-			}
-			from := strings.TrimSpace(parts[0])
-			to := strings.TrimSpace(parts[1])
-			if _, exists := network.Stations[from]; !exists {
-				return Network{}, errors.New("connection references non-existent station")
-			}
-			if _, exists := network.Stations[to]; !exists {
-				return Network{}, errors.New("connection references non-existent station")
-			}
-			if from == to {
-				return Network{}, errors.New("connection references the same station")
-			}
-			for _, conn := range network.Connections[from] {
-				if conn == to {
-					return Network{}, errors.New("duplicate connection")
-				}
-			}
-			network.Connections[from] = append(network.Connections[from], to)
-			network.Connections[to] = append(network.Connections[to], from)
-		}
-	}
+        case "connections":
+            parts := strings.Split(line, "-")
+            if len(parts) != 2 {
+                return Network{}, errors.New("invalid connection format")
+            }
+            from := strings.TrimSpace(parts[0])
+            to := strings.TrimSpace(parts[1])
+            if _, exists := network.Stations[from]; !exists {
+                return Network{}, errors.New("connection references non-existent station")
+            }
+            if _, exists := network.Stations[to]; !exists {
+                return Network{}, errors.New("connection references non-existent station")
+            }
+            if from == to {
+                return Network{}, errors.New("connection references the same station")
+            }
+            for _, conn := range network.Connections[from] {
+                if conn == to {
+                    return Network{}, errors.New("duplicate connection")
+                }
+            }
+            network.Connections[from] = append(network.Connections[from], to)
+            network.Connections[to] = append(network.Connections[to], from)
+        }
+    }
+
+
 
 	return network, nil
 } // ReadNetwork() END
