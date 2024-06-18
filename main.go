@@ -2,244 +2,179 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
 
-// Station represents a train station with a name and coordinates
 type Station struct {
-	Name string
-	X, Y int
+	name string
+	x, y int
 }
 
-// Connection represents a track between two stations
-type Connection struct {
-	From, To string
-}
+type Graph map[string][]string
 
-// Network represents the entire rail network
-type Network struct {
-	Stations    map[string]Station
-	Connections map[string][]string
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-func main() {
-	if len(os.Args) != 5 {
-		fmt.Fprintln(os.Stderr, "Error: Incorrect number of command line arguments")
-		return
-	}
-
-	filePath := os.Args[1]
-	startStation := os.Args[2]
-	endStation := os.Args[3]
-	numTrains, err := strconv.Atoi(os.Args[4])
-	if err != nil || numTrains <= 0 {
-		fmt.Fprintln(os.Stderr, "Error: Number of trains is not a valid positive integer")
-		return
-	}
-
-	network, err := ReadNetwork(filePath)
+func networkMap(filename string) (Graph, map[string]Station, error) {
+	file, err := os.Open(filename)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		return
+		return nil, nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	graph := make(Graph)
+	stations := make(map[string]Station)
+	var section string
+
+	for scanner.Scan() {
+		line := strings.Split(strings.TrimSpace(scanner.Text()), "#")[0] // Remove comments
+		if line == "" {
+			continue // Skip empty lines
+		}
+
+		if line == "stations:" {
+			section = "stations"
+			continue
+		} else if line == "connections:" {
+			section = "connections"
+			continue
+		}
+
+		if section == "stations" {
+			parts := strings.Split(line, ",")
+			if len(parts) != 3 {
+				return nil, nil, fmt.Errorf("Error: invalid station line format")
+			}
+			name := strings.TrimSpace(parts[0])
+			x, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+			if err != nil {
+				return nil, nil, fmt.Errorf("Error: invalid X-coordinate for station %s", name)
+			}
+			y, err := strconv.Atoi(strings.TrimSpace(parts[2]))
+			if err != nil {
+				return nil, nil, fmt.Errorf("Error: invalid Y-coordinate for station %s", name)
+			}
+			stations[name] = Station{name, x, y}
+		} else if section == "connections" {
+			parts := strings.Split(line, "-")
+			if len(parts) != 2 {
+				return nil, nil, fmt.Errorf("Error: invalid connection line format")
+			}
+			from := strings.TrimSpace(parts[0])
+			to := strings.TrimSpace(parts[1])
+			if _, ok := graph[from]; !ok {
+				graph[from] = make([]string, 0)
+			}
+			graph[from] = append(graph[from], to)
+			if _, ok := graph[to]; !ok {
+				graph[to] = make([]string, 0)
+			}
+			graph[to] = append(graph[to], from)
+		}
 	}
 
-	if _, exists := network.Stations[startStation]; !exists {
-		fmt.Fprintln(os.Stderr, "Error: Start station does not exist")
-		return
+	if err := scanner.Err(); err != nil {
+		return nil, nil, err
 	}
 
-	if _, exists := network.Stations[endStation]; !exists {
-		fmt.Fprintln(os.Stderr, "Error: End station does not exist")
-		return
-	}
+	return graph, stations, nil
+}
 
-	if startStation == endStation {
-		fmt.Fprintln(os.Stderr, "Error: Start and end station are the same")
-		return
-	}
-
-	movements, err := PlanTrainMovements(network, startStation, endStation, numTrains)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		return
-	}
-
-	for _, move := range movements {
-		fmt.Println(strings.Join(move, " "))
-	}
-} // main() END
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// ReadNetwork reads and parses the network map from a file
-func ReadNetwork(filePath string) (Network, error) {
-    file, err := os.Open(filePath)
-    if err != nil {
-        return Network{}, err
-    }
-    defer file.Close()
-
-    scanner := bufio.NewScanner(file)
-    network := Network{
-        Stations:    make(map[string]Station),
-        Connections: make(map[string][]string),
-    }
-    section := ""
-
-    for scanner.Scan() {
-        line := strings.TrimSpace(scanner.Text())
-        if line == "" || strings.HasPrefix(line, "#") {
-            continue
-        }
-        if line == "stations:" {
-            section = "stations"
-            continue
-        }
-        if line == "connections:" {
-            section = "connections"
-            continue
-        }
-
-        switch section {
-        case "stations":
-            parts := strings.Split(line, ",")
-            if len(parts) != 3 {
-                return Network{}, errors.New("invalid station format")
-            }
-            name := strings.TrimSpace(parts[0])
-            x, err1 := strconv.Atoi(strings.TrimSpace(parts[1]))
-            y, err2 := strconv.Atoi(strings.TrimSpace(parts[2]))
-            if err1 != nil || err2 != nil || x < 0 || y < 0 {
-                return Network{}, errors.New("invalid station coordinates")
-            }
-            if _, exists := network.Stations[name]; exists {
-                return Network{}, errors.New("duplicate station name")
-            }
-            network.Stations[name] = Station{name, x, y}
-
-        case "connections":
-            parts := strings.Split(line, "-")
-            if len(parts) != 2 {
-                return Network{}, errors.New("invalid connection format")
-            }
-            from := strings.TrimSpace(parts[0])
-            to := strings.TrimSpace(parts[1])
-            if _, exists := network.Stations[from]; !exists {
-                return Network{}, errors.New("connection references non-existent station")
-            }
-            if _, exists := network.Stations[to]; !exists {
-                return Network{}, errors.New("connection references non-existent station")
-            }
-            if from == to {
-                return Network{}, errors.New("connection references the same station")
-            }
-            for _, conn := range network.Connections[from] {
-                if conn == to {
-                    return Network{}, errors.New("duplicate connection")
-                }
-            }
-            network.Connections[from] = append(network.Connections[from], to)
-            network.Connections[to] = append(network.Connections[to], from)
-        }
-    }
-
-
-
-	return network, nil
-} // ReadNetwork() END
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// BFS to find all shortest paths from start to end
-func BFSAllPaths(network Network, start, end string) ([][]string, error) {
+func Path(graph Graph, start, end string) [][]string {
 	queue := [][]string{{start}}
-	paths := [][]string{}
-	shortestPathLength := -1
+	visited := make(map[string]bool)
+	visited[start] = true
+	var paths [][]string
 
 	for len(queue) > 0 {
 		path := queue[0]
 		queue = queue[1:]
-		last := path[len(path)-1]
+		node := path[len(path)-1]
 
-		if last == end {
-			if shortestPathLength == -1 || len(path) == shortestPathLength {
-				shortestPathLength = len(path)
-				paths = append(paths, path)
-			} else if len(path) > shortestPathLength {
-				break
-			}
-			continue
+		if node == end {
+			paths = append(paths, path)
 		}
 
-		for _, neighbor := range network.Connections[last] {
-			if !contains(path, neighbor) {
-				newPath := append([]string{}, path...)
+		for _, neighbor := range graph[node] {
+			if !visited[neighbor] {
+				visited[neighbor] = true
+				newPath := make([]string, len(path))
+				copy(newPath, path)
 				newPath = append(newPath, neighbor)
 				queue = append(queue, newPath)
 			}
 		}
 	}
 
-	if len(paths) == 0 {
-		return nil, errors.New("no path found")
+	return paths
+}
+
+func main() {
+	if len(os.Args) != 5 {
+		fmt.Fprintf(os.Stderr, "Error: incorrect number of arguments\n")
+		os.Exit(1)
 	}
 
-	return paths, nil
-} // BFSAllPaths() END
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Check if a slice contains a string
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
+	networkFile := os.Args[1]
+	startStation := os.Args[2]
+	endStation := os.Args[3]
+	numTrains, err := strconv.Atoi(os.Args[4])
+	if err != nil || numTrains <= 0 {
+		fmt.Fprintf(os.Stderr, "Error: invalid number of trains\n")
+		os.Exit(1)
 	}
-	return false
-} // contains() END
 
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// PlanTrainMovements plans the movements for multiple trains
-func PlanTrainMovements(network Network, start, end string, numTrains int) ([][]string, error) {
-	allPaths, err := BFSAllPaths(network, start, end)
+	graph, stations, err := networkMap(networkFile)
 	if err != nil {
-		return nil, err
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
 
-	paths := make([][]string, numTrains)
-	for i := 0; i < numTrains; i++ {
-		paths[i] = allPaths[i%len(allPaths)]
+	if _, ok := stations[startStation]; !ok {
+		fmt.Fprintf(os.Stderr, "Error: start station %s does not exist\n", startStation)
+		os.Exit(1)
 	}
 
-	// Simulation of train movements
-	movements := [][]string{}
-	trainPositions := make(map[string]string)
-	for i := 0; i < numTrains; i++ {
-		trainPositions[fmt.Sprintf("T%d", i+1)] = start
+	if _, ok := stations[endStation]; !ok {
+		fmt.Fprintf(os.Stderr, "Error: end station %s does not exist\n", endStation)
+		os.Exit(1)
 	}
 
-	maxLen := 0
-	for _, path := range paths {
-		if len(path) > maxLen {
-			maxLen = len(path)
-		}
+	if startStation == endStation {
+		fmt.Fprintf(os.Stderr, "Error: start and end stations cannot be the same\n")
+		os.Exit(1)
 	}
 
-	for i := 1; i < maxLen; i++ {
-		move := []string{}
-		for t, path := range paths {
-			if i < len(path) {
-				train := fmt.Sprintf("T%d", t+1)
-				nextStation := path[i]
-				move = append(move, fmt.Sprintf("%s-%s", train, nextStation))
-				trainPositions[train] = nextStation
+	paths := Path(graph, startStation, endStation)
+
+	if len(paths) == 0 {
+		fmt.Fprintf(os.Stderr, "Error: no path found between %s and %s\n", startStation, endStation)
+		os.Exit(1)
+	}
+
+	// Sort paths by length (number of stations)
+	sort.Slice(paths, func(i, j int) bool {
+		return len(paths[i]) < len(paths[j])
+	})
+
+	// Output train movements
+	numTurns := 0
+	for turn := 0; turn < len(paths[0]); turn++ {
+		for trainID := 1; trainID <= numTrains; trainID++ {
+			for _, path := range paths {
+				if trainID > len(path) {
+					continue
+				}
+				if turn < len(path) {
+					fmt.Printf("T%d-%s ", trainID, path[turn])
+				}
 			}
 		}
-		movements = append(movements, move)
+		fmt.Println()
+		numTurns++
 	}
 
-	return movements, nil
-} // PlanTrainMovements() END
+	fmt.Fprintf(os.Stderr, "Number of turns: %d\n", numTurns)
+}
