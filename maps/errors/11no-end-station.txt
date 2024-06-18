@@ -1,3 +1,0 @@
-go run main.go maps/01london.txt waterloo 4
-
-go run main.go maps/errors/11no-end-station_london.txt waterloo victoria 4

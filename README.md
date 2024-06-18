@@ -1,42 +1,30 @@
 # Stations
 
-A program that shows train routes.
+This Go program simulates the movement of multiple trains on a rail network, from a starting station to an ending station, based on the shortest paths between the stations
 
 ## Before starting the program
 
-
-- 
-
+- You have to have Golang installed.
 
 ## How to use
 
-1. build the program:
+Usage: go run . [path to file containing network map] [start station] [end station] [number of trains]
 
-```
-go build main.go
-
-```
-
-2. run the program:
-```
-./main
-```
-
-## Functionality
-
-* 
-
-
-## TO DO
+### Valid maps
 
 There are valid train routes, for example:
 
-go run main.go maps/01london.txt waterloo st_pancras 2
+ ```
+go run . maps/01london.txt waterloo st_pancras 2
+ ```
 
-And invalid tests, for example:
+### Invalid maps
 
-go run main.go maps/errors/10no-start-station_london.txt waterloo victoria 4
+There ae maps that contain errors, for example:
 
+```
+go run . maps/errors/10no-start-station_london.txt waterloo victoria 4
+```
 
 ## Coders
 

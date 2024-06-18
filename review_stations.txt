@@ -19,7 +19,7 @@ It finds only a single valid route for 1 train between waterloo and st_pancras i
 
 
 ------------------------------------------------------------------------------------------
-go run main.go maps/01london.txt waterloo st_pancras 2
+go run . maps/01london.txt waterloo st_pancras 2
 ------------------------------------------------------------------------------------------
 
 It can find more than one route for 2 trains between waterloo and st_pancras for the London Network Map
@@ -49,7 +49,7 @@ T3-st_pancras T4-st_pancras
 
 
 ------------------------------------------------------------------------------------------
-go run main.go maps/02bond.txt bond_square space_port 4
+go run . maps/02bond.txt bond_square space_port 4
 ------------------------------------------------------------------------------------------
 
 It completes the movements in no more than 6 turns for 4 trains between bond_square and space_port
@@ -75,7 +75,7 @@ T3-space_port T4-orange_junction
 T4-space_port
 
 ------------------------------------------------------------------------------------------
-go run main.go maps/03jungle.txt jungle desert 10 ????????????????????
+go run . maps/03jungle.txt jungle desert 10
 ------------------------------------------------------------------------------------------
 
 It completes the movements in no more than 8 turns for 10 trains between jungle and desert
@@ -128,7 +128,7 @@ T7-desert T8-desert T9-desert T10-wetlands
 T10-desert
 
 ------------------------------------------------------------------------------------------
-go run main.go maps/04beginning.txt beginning terminus 20 ????????????????????
+go run . maps/04beginning.txt beginning terminus 20
 ------------------------------------------------------------------------------------------
 
 It completes the movements in no more than 11 turns for 20 trains between beginning and terminus
@@ -159,7 +159,7 @@ T16-terminus T18-far T19-terminus
 T18-terminus T20-terminus
 
 ------------------------------------------------------------------------------------------
-go run main.go maps/05one.txt two four 4
+go run . maps/05one.txt two four 4
 ------------------------------------------------------------------------------------------
 
 It completes the movements in no more than 6 turns for 4 trains between two and four
@@ -192,7 +192,7 @@ T3-four T4-one
 T4-four
 
 ------------------------------------------------------------------------------------------
-go run main.go maps/06beethoven.txt beethoven part 9 ????????????????????
+go run . maps/06beethoven.txt beethoven part 9
 ------------------------------------------------------------------------------------------
 
 It completes the movements in no more than 6 turns for 9 trains between beethoven and part
@@ -225,7 +225,7 @@ T6-part T7-part T8-verdi T9-mozart
 T8-part T9-part
 
 ------------------------------------------------------------------------------------------
-go run main.go maps/07small.txt small large 9 ????????????????????
+go run . maps/07small.txt small large 9
 ------------------------------------------------------------------------------------------
 
 It completes the movements in no more than 8 turns for 9 trains between small and large
@@ -317,66 +317,78 @@ It works with additional tricky cases.
 Challenge the pathfinder with as many examples as you like, including ones with many stations and many trains.
 
 ------------------------------------------------------------------------------------------
-errors 08 - 24
+errors 08 - 23
 ------------------------------------------------------------------------------------------
 
-go run main.go maps/01london.txt waterloo 4
-go run main.go maps/01london.txt waterloo 4
+8
+go run . maps/01london.txt waterloo 4
 It displays "Error" on stderr when too few command line arguments are used.
 
-go run main.go maps/01london.txt waterloo victoria 4 8
-go run main.go maps/errors/09too-many.txt
+9
+go run . maps/01london.txt waterloo victoria 4 8
 It displays "Error" on stderr when too many command line arguments are used.
 
-go run main.go maps/01london.txt victoria 4
-go run main.go maps/errors/10no-start-station_london.txt waterloo victoria 4
+10
+go run . maps/01london.txt victoria 4
+go run . maps/errors/10no-start-station_london.txt waterloo victoria 4
 It displays "Error" on stderr when the start station does not exist.
 
-go run main.go maps/01london.txt waterloo 4
-go run main.go maps/errors/11no-end-station_london.txt waterloo victoria 4
+11
+go run . maps/01london.txt waterloo 4
+go run . maps/errors/11no-end-station_london.txt waterloo victoria 4
 It displays "Error" on stderr when the end station does not exist.
 
-go run main.go maps/01london.txt waterloo waterloo 4
-go run main.go maps/errors/12same-start-end_london.txt waterloo victoria 4
+12
+go run . maps/01london.txt waterloo waterloo 4
+go run . maps/errors/12same-start-end_london.txt waterloo victoria 4
 It displays "Error" on stderr when the start and end station are the same.
 
-go run main.go maps/01london.txt ???????????????????? 4
-go run main.go maps/errors/13no-path_london.txt ???????????????????? 4
+13
+???????????
 It displays "Error" on stderr when no path exists between the start and end stations.
 
-go run main.go maps/errors/14duplicate-routes_london.txt waterloo victoria 4
+14
+go run . maps/errors/14duplicate-routes_london.txt waterloo victoria 4
 It displays "Error" on stderr when duplicate routes exist between two stations, including in reverse.
 
-go run main.go maps/01london.txt waterloo victoria -4
+15
+go run . maps/01london.txt waterloo victoria -4
 It displays "Error" on stderr when the number of trains is not a valid positive integer.
 
-go run main.go maps/errors/16no-valid-coord_london.txt waterloo victoria 4
+16
+go run . maps/errors/16no-valid-coord_london.txt waterloo victoria 4
 It displays "Error" on stderr when any of the coordinates are not valid positive integers.
 
-go run main.go maps/errors/17same-coords_london.txt waterloo victoria 4 ????????????????????
+17
+go run . maps/errors/17same-coords_london.txt waterloo victoria 4
 It displays "Error" on stderr when two stations exist at the same coordinates.
 
-go run main.go maps/01london.txt waterloo madeupstation 4
-go run main.go maps/01london.txt madeupstation victoria 4
-go run main.go maps/errors/18station-not-exist_london.txt waterloo victoria 4
+18
+go run . maps/01london.txt waterloo madeupstation 4
+go run . maps/01london.txt madeupstation victoria 4
+go run . maps/errors/18station-not-exist_london.txt waterloo victoria 4
 It displays "Error" on stderr when a connection is made with a station which does not exist.
 
-go run main.go maps/01london.txt waterloo waterloo 4
-go run main.go maps/errors/19duplicate-names_london.txt waterloo victoria 4
+19
+go run . maps/01london.txt waterloo waterloo 4
+go run . maps/errors/19duplicate-names_london.txt waterloo victoria 4
 It displays "Error" on stderr when station names are duplicated.
 
-go run main.go maps/01london.txt waterlooo victoria 4
-go run main.go maps/01london.txt waterloo victoriaa 4
+20
+go run . maps/01london.txt waterlooo victoria 4
+go run . maps/01london.txt waterloo victoriaa 4
 It displays "Error" on stderr when station names are invalid.
 
-go run main.go maps/errors/21no-stations_london.txt waterloo victoria 4
+21
+go run . maps/errors/21no-stations_london.txt waterloo victoria 4
 It displays "Error" on stderr when the map does not contain a "stations:" section.
 
-go run main.go maps/errors/22no-connections_london.txt waterloo victoria 4
+22
+go run . maps/errors/22no-connections_london.txt waterloo victoria 4
 It displays "Error" on stderr when the map does not contain a "connections:" section.
 
-go run main.go maps/errors/23tenk.txt
-go run main.go maps/errors/24over-tenk.txt ????????????????????
+23
+go run . maps/errors/23over-tenK.txt station2 station4 4
 It displays "Error" on stderr when a map contains more than 10000 stations.
 
 

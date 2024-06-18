@@ -1,0 +1,22 @@
+go run . maps/01london.txt waterloo 4
+go run . maps/01london.txt waterloo victoria 4 8
+go run . maps/01london.txt victoria 4
+go run . maps/errors/10no-start-station_london.txt waterloo victoria 4
+go run . maps/01london.txt waterloo 4
+go run . maps/errors/11no-end-station_london.txt waterloo victoria 4
+go run . maps/01london.txt waterloo waterloo 4
+go run . maps/errors/12same-start-end_london.txt waterloo victoria 4
+go run . maps/errors/14duplicate-routes_london.txt waterloo victoria 4
+go run . maps/01london.txt waterloo victoria -4
+go run . maps/errors/16no-valid-coord_london.txt waterloo victoria 4
+go run . maps/errors/17same-coords_london.txt waterloo victoria 4
+go run . maps/01london.txt waterloo madeupstation 4
+go run . maps/01london.txt madeupstation victoria 4
+go run . maps/errors/18station-not-exist_london.txt waterloo victoria 4
+go run . maps/01london.txt waterloo waterloo 4
+go run . maps/errors/19duplicate-names_london.txt waterloo victoria 4
+go run . maps/01london.txt waterlooo victoria 4
+go run . maps/01london.txt waterloo victoriaa 4
+go run . maps/errors/21no-stations_london.txt waterloo victoria 4
+go run . maps/errors/22no-connections_london.txt waterloo victoria 4
+go run . maps/errors/23over-tenK.txt station2 station4 4

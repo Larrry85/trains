@@ -1,4 +1,0 @@
-go run main.go maps/01london.txt waterloo madeupstation 4
-go run main.go maps/01london.txt madeupstation victoria 4
-
-go run main.go maps/errors/18station-not-exist_london.txt waterloo victoria 4
