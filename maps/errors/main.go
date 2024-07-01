@@ -39,6 +39,13 @@ type Train struct {
 	Location string // Current location of the train
 }
 
+// ANSI color escape codes
+const (
+	ColorReset  = "\033[0m"
+	ColorGreen  = "\033[32m"
+	ColorCyan   = "\033[36m"
+)
+
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 func main() {
 
