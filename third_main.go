@@ -231,9 +231,18 @@ func printTrainMovements(path []string, numTrains int) {
 	stationOccupancy := make(map[string][]string) // Track trains at each station
 	moveCount := 0
 
-	for _, station := range path {
-		moveLine := ""
+	// Initialize variables to accumulate movements for each turn
+	var turnMoves [][]string
 
+	// Iterate over the path
+	for _, station := range path {
+		if station == path[0] { // Skip printing the start station
+			continue
+		}
+
+		var moveLine []string
+
+		// Move trains to the next station
 		for i := 0; i < numTrains; i++ {
 			// Move train to the next station if possible
 			if canMoveTrain(stationOccupancy, station, trains[i]) {
@@ -250,15 +259,21 @@ func printTrainMovements(path []string, numTrains int) {
 				// Add train to the new station
 				stationOccupancy[station] = append(stationOccupancy[station], trains[i])
 
-				// Prepare the line to print
-				moveLine += fmt.Sprintf("%s-%s ", trains[i], station)
+				// Prepare the line to print (train and station)
+				moveLine = append(moveLine, fmt.Sprintf("%s-%s", trains[i], station))
 			}
 		}
 
-		if moveLine != "" {
-			fmt.Println(strings.TrimSpace(moveLine))
+		// Add the moveLine to turnMoves if there are movements
+		if len(moveLine) > 0 {
+			turnMoves = append(turnMoves, moveLine)
 			moveCount++
 		}
+	}
+
+	// Print the movements for each turn
+	for _, moves := range turnMoves {
+		fmt.Println(strings.Join(moves, " "))
 	}
 
 	fmt.Println() // Empty line after movements
@@ -270,13 +285,25 @@ func printTrainMovements(path []string, numTrains int) {
 }
 
 func canMoveTrain(stationOccupancy map[string][]string, station, train string) bool {
-	// Check if the train is already at the destination station
-	for _, t := range stationOccupancy[station] {
-		if t == train {
-			return false
+	// Check if there is already a train at the destination station
+	if trainsAtStation, exists := stationOccupancy[station]; exists {
+		// Check if the train we want to move is already at the station
+		for _, t := range trainsAtStation {
+			if t == train {
+				// If the train we want to move is already at the station,
+				// check if any other trains are present before it
+				for _, otherTrain := range trainsAtStation {
+					if otherTrain != train {
+						// If another train is present, this train cannot move yet
+						return false
+					}
+				}
+				// If no other train is present, this train can move
+				return true
+			}
 		}
 	}
 
-	// Otherwise, train can move to the destination station
+	// If the station is empty or the train is not yet at the station, it can move
 	return true
 }
