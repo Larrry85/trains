@@ -261,22 +261,22 @@ func printTrainMovements(path []string, numTrains int) {
 		}
 	}
 
-	fmt.Println() // Empty line after movements.
+	fmt.Println() // Empty line after movements
 	fmt.Printf("Movements: %d\n", moveCount)
-	fmt.Println() // Empty line after movement count.
+	fmt.Println() // Empty line after movement count
 
 	// Print "***********"
 	fmt.Println("***********")
 }
 
 func canMoveTrain(stationOccupancy map[string][]string, station, train string) bool {
-	// Checks if the train is already at the destination station
+	// Check if the train is already at the destination station
 	for _, t := range stationOccupancy[station] {
 		if t == train {
 			return false
 		}
 	}
 
-	// Otherwise, train can move to the destination station................
+	// Otherwise, train can move to the destination station
 	return true
 }
