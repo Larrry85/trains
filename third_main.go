@@ -56,15 +56,21 @@ func main() {
 		return
 	}
 
-	// Run Dijkstra's algorithm
-	path, err := dijkstra(graph, startStation, endStation)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		return
+	// Find all paths between start and end station
+	paths := findAllPaths(graph, startStation, endStation)
+
+	// Print all routes found
+	fmt.Println("All possible routes:")
+	for i, path := range paths {
+		fmt.Printf("Route %d: %v\n", i+1, path)
+		fmt.Println()
 	}
 
-	// Print train movements
-	printTrainMovements(path, numTrains)
+	// Simulate train movements for each route
+	for i, path := range paths {
+		fmt.Printf("Simulation for Route %d:\n", i+1)
+		printTrainMovements(path, numTrains)
+	}
 }
 
 func readMap(filePath string) (*Graph, error) {
@@ -187,56 +193,30 @@ func readMap(filePath string) (*Graph, error) {
 	return graph, nil
 }
 
-func dijkstra(graph *Graph, start, end string) ([]string, error) {
-	dist := make(map[string]int)
-	prev := make(map[string]string)
-	unvisited := make(map[string]bool)
+func findAllPaths(graph *Graph, start, end string) [][]string {
+	visited := make(map[string]bool)
+	var paths [][]string
+	currentPath := []string{start}
+	findPaths(graph, start, end, visited, currentPath, &paths)
+	return paths
+}
 
-	for station := range graph.stations {
-		dist[station] = 1<<31 - 1 // equivalent to infinity
-		unvisited[station] = true
-	}
-	dist[start] = 0
+func findPaths(graph *Graph, current, end string, visited map[string]bool, currentPath []string, paths *[][]string) {
+	visited[current] = true
 
-	for len(unvisited) > 0 {
-		var u string
-		minDist := 1<<31 - 1
-		for station := range unvisited {
-			if dist[station] < minDist {
-				minDist = dist[station]
-				u = station
-			}
-		}
-
-		if u == end {
-			break
-		}
-
-		delete(unvisited, u)
-
-		for _, neighbor := range graph.connections[u] {
-			if !unvisited[neighbor] {
-				continue
-			}
-
-			alt := dist[u] + 1
-			if alt < dist[neighbor] {
-				dist[neighbor] = alt
-				prev[neighbor] = u
+	if current == end {
+		*paths = append(*paths, append([]string{}, currentPath...))
+	} else {
+		for _, neighbor := range graph.connections[current] {
+			if !visited[neighbor] {
+				currentPath = append(currentPath, neighbor)
+				findPaths(graph, neighbor, end, visited, currentPath, paths)
+				currentPath = currentPath[:len(currentPath)-1]
 			}
 		}
 	}
 
-	path := []string{}
-	for u := end; u != ""; u = prev[u] {
-		path = append([]string{u}, path...)
-	}
-
-	if len(path) == 0 || path[0] != start {
-		return nil, errors.New("no path exists between the start and end stations")
-	}
-
-	return path, nil
+	visited[current] = false
 }
 
 func printTrainMovements(path []string, numTrains int) {
@@ -265,12 +245,9 @@ func printTrainMovements(path []string, numTrains int) {
 		stationQueues[path[0]] = append(stationQueues[path[0]], i)
 	}
 
-	// Maximum steps to prevent infinite loops
-	maxSteps := 1000
-	var steps int
-
 	// Main simulation loop
-	for steps = 0; steps < maxSteps; steps++ {
+	var steps int // Initialize steps counter
+	for steps = 0; ; steps++ {
 		var moveLine []string
 		allTrainsAtEnd := true
 
@@ -298,7 +275,13 @@ func printTrainMovements(path []string, numTrains int) {
 						// Update train's position and station queues
 						trainPositions[i]++
 						stationQueues[currentStation] = stationQueues[currentStation][1:]
-						stationQueues[nextStation] = append(stationQueues[nextStation], i)
+
+						// Remove train from current station queue when it reaches end station
+						if nextStation == path[len(path)-1] {
+							stationQueues[nextStation] = stationQueues[nextStation][:0]
+						} else {
+							stationQueues[nextStation] = append(stationQueues[nextStation], i)
+						}
 					}
 				}
 			}
@@ -313,16 +296,15 @@ func printTrainMovements(path []string, numTrains int) {
 		if allTrainsAtEnd {
 			break
 		}
-	}
 
-	// Check if simulation exceeded maximum steps
-	if steps >= maxSteps {
-		fmt.Fprintln(os.Stderr, "Error: Simulation exceeded maximum number of steps, possible infinite loop detected")
-		return
+		// Add a check to prevent potential infinite loops
+		if steps > 2*numTrains*len(path) {
+			fmt.Fprintln(os.Stderr, "Error: Simulation exceeded maximum steps, possible infinite loop detected")
+			return
+		}
 	}
 
 	// Print movements count
-	fmt.Println()
 	fmt.Printf("Movements: %d\n", steps)
 	fmt.Println()
 
