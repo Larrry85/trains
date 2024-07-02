@@ -50,18 +50,27 @@ func main() {
 		return
 	}
 
+	// Check for same start and end station
 	if startStation == endStation {
 		fmt.Fprintln(os.Stderr, "Error: Start and end station cannot be the same")
 		return
 	}
 
-	path, err := dijkstra(graph, startStation, endStation)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		return
+	// Find all paths between start and end station
+	paths := findAllPaths(graph, startStation, endStation)
+
+	// Print all routes found
+	fmt.Println("All possible routes:")
+	for i, path := range paths {
+		fmt.Printf("Route %d: %v\n", i+1, path)
+		fmt.Println()
 	}
 
-	printTrainMovements(path, numTrains)
+	// Simulate train movements for each route
+	for i, path := range paths {
+		fmt.Printf("Simulation for Route %d:\n", i+1)
+		printTrainMovements(path, numTrains)
+	}
 }
 
 func readMap(filePath string) (*Graph, error) {
@@ -79,6 +88,9 @@ func readMap(filePath string) (*Graph, error) {
 	scanner := bufio.NewScanner(file)
 	section := ""
 
+	stationCount := 0
+	connectionCount := 0
+
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
@@ -87,9 +99,14 @@ func readMap(filePath string) (*Graph, error) {
 
 		if line == "stations:" {
 			section = "stations"
+			continue
 		} else if line == "connections:" {
 			section = "connections"
-		} else if section == "stations" {
+			continue
+		}
+
+		if section == "stations" {
+			// Process station line
 			parts := strings.Split(line, ",")
 			if len(parts) != 3 {
 				return nil, fmt.Errorf("invalid station line: %s", line)
@@ -117,7 +134,9 @@ func readMap(filePath string) (*Graph, error) {
 			}
 
 			graph.stations[name] = Station{name, x, y}
+			stationCount++
 		} else if section == "connections" {
+			// Process connection line
 			parts := strings.Split(line, "-")
 			if len(parts) != 2 {
 				return nil, fmt.Errorf("invalid connection line: %s", line)
@@ -134,6 +153,10 @@ func readMap(filePath string) (*Graph, error) {
 				return nil, fmt.Errorf("connection to non-existent station: %s", to)
 			}
 
+			if from == to {
+				return nil, fmt.Errorf("connection with same start and end station: %s", from)
+			}
+
 			for _, connected := range graph.connections[from] {
 				if connected == to {
 					return nil, fmt.Errorf("duplicate connection between %s and %s", from, to)
@@ -142,6 +165,16 @@ func readMap(filePath string) (*Graph, error) {
 
 			graph.connections[from] = append(graph.connections[from], to)
 			graph.connections[to] = append(graph.connections[to], from)
+			connectionCount++
+		}
+
+		// Check station and connection count
+		if stationCount > 10000 {
+			return nil, errors.New("map contains more than 10000 stations")
+		}
+
+		if connectionCount > 10000 {
+			return nil, errors.New("map contains more than 10000 connections")
 		}
 	}
 
@@ -160,56 +193,30 @@ func readMap(filePath string) (*Graph, error) {
 	return graph, nil
 }
 
-func dijkstra(graph *Graph, start, end string) ([]string, error) {
-	dist := make(map[string]int)
-	prev := make(map[string]string)
-	unvisited := make(map[string]bool)
+func findAllPaths(graph *Graph, start, end string) [][]string {
+	visited := make(map[string]bool)
+	var paths [][]string
+	currentPath := []string{start}
+	findPaths(graph, start, end, visited, currentPath, &paths)
+	return paths
+}
 
-	for station := range graph.stations {
-		dist[station] = 1<<31 - 1 // equivalent to infinity
-		unvisited[station] = true
-	}
-	dist[start] = 0
+func findPaths(graph *Graph, current, end string, visited map[string]bool, currentPath []string, paths *[][]string) {
+	visited[current] = true
 
-	for len(unvisited) > 0 {
-		var u string
-		minDist := 1<<31 - 1
-		for station := range unvisited {
-			if dist[station] < minDist {
-				minDist = dist[station]
-				u = station
-			}
-		}
-
-		if u == end {
-			break
-		}
-
-		delete(unvisited, u)
-
-		for _, neighbor := range graph.connections[u] {
-			if !unvisited[neighbor] {
-				continue
-			}
-
-			alt := dist[u] + 1
-			if alt < dist[neighbor] {
-				dist[neighbor] = alt
-				prev[neighbor] = u
+	if current == end {
+		*paths = append(*paths, append([]string{}, currentPath...))
+	} else {
+		for _, neighbor := range graph.connections[current] {
+			if !visited[neighbor] {
+				currentPath = append(currentPath, neighbor)
+				findPaths(graph, neighbor, end, visited, currentPath, paths)
+				currentPath = currentPath[:len(currentPath)-1]
 			}
 		}
 	}
 
-	path := []string{}
-	for u := end; u != ""; u = prev[u] {
-		path = append([]string{u}, path...)
-	}
-
-	if len(path) == 0 || path[0] != start {
-		return nil, errors.New("no path exists between the start and end stations")
-	}
-
-	return path, nil
+	visited[current] = false
 }
 
 func printTrainMovements(path []string, numTrains int) {
@@ -228,55 +235,79 @@ func printTrainMovements(path []string, numTrains int) {
 		}
 	}
 
-	stationOccupancy := make(map[string][]string) // Track trains at each station
-	moveCount := 0
+	// Track trains waiting to enter each station
+	stationQueues := make(map[string][]int)
 
-	for _, station := range path {
-		moveLine := ""
+	// Initialize train positions on the path
+	trainPositions := make([]int, numTrains)
+	for i := range trainPositions {
+		trainPositions[i] = 0
+		stationQueues[path[0]] = append(stationQueues[path[0]], i)
+	}
 
+	// Main simulation loop
+	var steps int // Initialize steps counter
+	for steps = 0; ; steps++ {
+		var moveLine []string
+		allTrainsAtEnd := true
+
+		// Process each train
 		for i := 0; i < numTrains; i++ {
-			// Move train to the next station if possible
-			if canMoveTrain(stationOccupancy, station, trains[i]) {
-				// Remove train from current station if it's moving from a different station
-				for currentStation, trainsAtStation := range stationOccupancy {
-					for j, train := range trainsAtStation {
-						if train == trains[i] {
-							stationOccupancy[currentStation] = append(trainsAtStation[:j], trainsAtStation[j+1:]...)
+			if trainPositions[i] < len(path)-1 {
+				allTrainsAtEnd = false
+				currentStation := path[trainPositions[i]]
+				nextStation := path[trainPositions[i]+1]
+
+				// Check if this train is next in line at current station
+				if len(stationQueues[currentStation]) > 0 && stationQueues[currentStation][0] == i {
+					// Check if next station is free from incoming trains
+					nextStationFree := true
+					for _, trainIdx := range stationQueues[nextStation] {
+						if trainPositions[trainIdx] == trainPositions[i]+1 {
+							nextStationFree = false
 							break
 						}
 					}
+
+					if nextStationFree {
+						moveLine = append(moveLine, fmt.Sprintf("%s-%s", trains[i], nextStation))
+
+						// Update train's position and station queues
+						trainPositions[i]++
+						stationQueues[currentStation] = stationQueues[currentStation][1:]
+
+						// Remove train from current station queue when it reaches end station
+						if nextStation == path[len(path)-1] {
+							stationQueues[nextStation] = stationQueues[nextStation][:0]
+						} else {
+							stationQueues[nextStation] = append(stationQueues[nextStation], i)
+						}
+					}
 				}
-
-				// Add train to the new station
-				stationOccupancy[station] = append(stationOccupancy[station], trains[i])
-
-				// Prepare the line to print
-				moveLine += fmt.Sprintf("%s-%s ", trains[i], station)
 			}
 		}
 
-		if moveLine != "" {
-			fmt.Println(strings.TrimSpace(moveLine))
-			moveCount++
+		// Print movements if there are any
+		if len(moveLine) > 0 {
+			fmt.Println(strings.Join(moveLine, " "))
+		}
+
+		// Break loop if all trains have reached their destination
+		if allTrainsAtEnd {
+			break
+		}
+
+		// Add a check to prevent potential infinite loops
+		if steps > 2*numTrains*len(path) {
+			fmt.Fprintln(os.Stderr, "Error: Simulation exceeded maximum steps, possible infinite loop detected")
+			return
 		}
 	}
 
-	fmt.Println() // Empty line after movements
-	fmt.Printf("Movements: %d\n", moveCount)
-	fmt.Println() // Empty line after movement count
+	// Print movements count
+	fmt.Printf("Movements: %d\n", steps)
+	fmt.Println()
 
 	// Print "***********"
 	fmt.Println("***********")
-}
-
-func canMoveTrain(stationOccupancy map[string][]string, station, train string) bool {
-	// Check if the train is already at the destination station
-	for _, t := range stationOccupancy[station] {
-		if t == train {
-			return false
-		}
-	}
-
-	// Otherwise, train can move to the destination station
-	return true
 }
