@@ -66,11 +66,15 @@ func main() {
 		fmt.Println()
 	}
 
-	// Simulate train movements for each route
-	for i, path := range paths {
-		fmt.Printf("Simulation for Route %d:\n", i+1)
-		printTrainMovements(path, numTrains)
-	}
+	// Distribute trains across all routes
+	trainAssignments := distributeTrains(paths, numTrains)
+
+	// Simulate train movements across all routes
+	totalMovements := simulateTrainMovements(paths, trainAssignments)
+
+	// Print the total movements
+	fmt.Printf("Total Movements: %d\n", totalMovements)
+	fmt.Println("***********")
 }
 
 func readMap(filePath string) (*Graph, error) {
@@ -219,7 +223,19 @@ func findPaths(graph *Graph, current, end string, visited map[string]bool, curre
 	visited[current] = false
 }
 
-func printTrainMovements(path []string, numTrains int) {
+func distributeTrains(paths [][]string, numTrains int) []int {
+	trainAssignments := make([]int, numTrains)
+	for i := 0; i < numTrains; i++ {
+		trainAssignments[i] = i % len(paths)
+	}
+	return trainAssignments
+}
+
+func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
+	numTrains := len(trainAssignments)
+	trainPositions := make([]int, numTrains)
+	stationQueues := make(map[string][]int)
+
 	// Initialize trains with colors
 	trains := make([]string, numTrains)
 	for i := 0; i < numTrains; i++ {
@@ -235,14 +251,11 @@ func printTrainMovements(path []string, numTrains int) {
 		}
 	}
 
-	// Track trains waiting to enter each station
-	stationQueues := make(map[string][]int)
-
-	// Initialize train positions on the path
-	trainPositions := make([]int, numTrains)
+	// Initialize train positions and station queues
 	for i := range trainPositions {
 		trainPositions[i] = 0
-		stationQueues[path[0]] = append(stationQueues[path[0]], i)
+		startStation := paths[trainAssignments[i]][0]
+		stationQueues[startStation] = append(stationQueues[startStation], i)
 	}
 
 	// Main simulation loop
@@ -253,6 +266,7 @@ func printTrainMovements(path []string, numTrains int) {
 
 		// Process each train
 		for i := 0; i < numTrains; i++ {
+			path := paths[trainAssignments[i]]
 			if trainPositions[i] < len(path)-1 {
 				allTrainsAtEnd = false
 				currentStation := path[trainPositions[i]]
@@ -298,16 +312,12 @@ func printTrainMovements(path []string, numTrains int) {
 		}
 
 		// Add a check to prevent potential infinite loops
-		if steps > 2*numTrains*len(path) {
+		if steps > 2*numTrains*len(paths[0]) {
 			fmt.Fprintln(os.Stderr, "Error: Simulation exceeded maximum steps, possible infinite loop detected")
-			return
+			return steps
 		}
 	}
 
 	// Print movements count
-	fmt.Printf("Movements: %d\n", steps)
-	fmt.Println()
-
-	// Print "***********"
-	fmt.Println("***********")
+	return steps
 }
