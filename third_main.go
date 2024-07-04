@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -225,9 +226,27 @@ func findPaths(graph *Graph, current, end string, visited map[string]bool, curre
 
 func distributeTrains(paths [][]string, numTrains int) []int {
 	trainAssignments := make([]int, numTrains)
-	for i := 0; i < numTrains; i++ {
-		trainAssignments[i] = i % len(paths)
+
+	// Calculate the number of trains to assign per route
+	trainsPerRoute := numTrains / len(paths)
+	extraTrains := numTrains % len(paths)
+
+	// Prioritize paths by their length (shorter paths first)
+	sort.Slice(paths, func(i, j int) bool {
+		return len(paths[i]) < len(paths[j])
+	})
+
+	// Assign trains to paths from shortest to longest
+	for i := 0; i < len(paths); i++ {
+		numTrainsForPath := trainsPerRoute
+		if i < extraTrains {
+			numTrainsForPath++
+		}
+		for j := 0; j < numTrainsForPath; j++ {
+			trainAssignments[i*trainsPerRoute+j] = i
+		}
 	}
+
 	return trainAssignments
 }
 
