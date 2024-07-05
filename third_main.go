@@ -60,6 +60,10 @@ func main() {
 
 	// Find all paths between start and end station
 	paths := findShortestPaths(graph, startStation, endStation)
+	if len(paths) == 0 {
+		fmt.Fprintln(os.Stderr, "Error: No path exists between the start and end stations")
+		return
+	}
 
 	// Print all routes found
 	fmt.Println("All possible routes:")
@@ -91,11 +95,14 @@ func readMap(filePath string) (*Graph, error) {
 		connections: make(map[string][]string),
 	}
 
+	existingConnections := make(map[string]struct{})
 	scanner := bufio.NewScanner(file)
 	section := ""
 
 	stationCount := 0
 	connectionCount := 0
+	stationsSectionExists := false
+	connectionsSectionExists := false
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -105,9 +112,11 @@ func readMap(filePath string) (*Graph, error) {
 
 		if line == "stations:" {
 			section = "stations"
+			stationsSectionExists = true
 			continue
 		} else if line == "connections:" {
 			section = "connections"
+			connectionsSectionExists = true
 			continue
 		}
 
@@ -119,6 +128,7 @@ func readMap(filePath string) (*Graph, error) {
 			}
 
 			name := strings.TrimSpace(parts[0])
+
 			x, err := strconv.Atoi(strings.TrimSpace(parts[1]))
 			if err != nil || x < 0 {
 				return nil, fmt.Errorf("invalid x coordinate for station %s", name)
@@ -163,11 +173,17 @@ func readMap(filePath string) (*Graph, error) {
 				return nil, fmt.Errorf("connection with same start and end station: %s", from)
 			}
 
-			for _, connected := range graph.connections[from] {
-				if connected == to {
-					return nil, fmt.Errorf("duplicate connection between %s and %s", from, to)
-				}
+			connectionKey := fmt.Sprintf("%s-%s", from, to)
+			reverseConnectionKey := fmt.Sprintf("%s-%s", to, from)
+			if _, exists := existingConnections[connectionKey]; exists {
+				return nil, fmt.Errorf("duplicate connection between %s and %s", from, to)
 			}
+			if _, exists := existingConnections[reverseConnectionKey]; exists {
+				return nil, fmt.Errorf("duplicate connection between %s and %s", from, to)
+			}
+
+			existingConnections[connectionKey] = struct{}{}
+			existingConnections[reverseConnectionKey] = struct{}{}
 
 			graph.connections[from] = append(graph.connections[from], to)
 			graph.connections[to] = append(graph.connections[to], from)
@@ -188,6 +204,14 @@ func readMap(filePath string) (*Graph, error) {
 		return nil, err
 	}
 
+	if !stationsSectionExists {
+		return nil, errors.New("map does not contain a \"stations:\" section")
+	}
+
+	if !connectionsSectionExists {
+		return nil, errors.New("map does not contain a \"connections:\" section")
+	}
+
 	if len(graph.stations) == 0 {
 		return nil, errors.New("map does not contain any stations")
 	}
@@ -198,6 +222,7 @@ func readMap(filePath string) (*Graph, error) {
 
 	return graph, nil
 }
+
 
 func findShortestPaths(graph *Graph, start, end string) [][]string {
 	paths := [][]string{}
@@ -211,17 +236,16 @@ func findShortestPaths(graph *Graph, start, end string) [][]string {
 
 		if current == end {
 			paths = append(paths, path)
+			continue
 		}
 
 		if !visited[current] {
 			visited[current] = true
 			for _, neighbor := range graph.connections[current] {
-				if !visited[neighbor] {
-					newPath := make([]string, len(path))
-					copy(newPath, path)
-					newPath = append(newPath, neighbor)
-					queue.PushBack(newPath)
-				}
+				newPath := make([]string, len(path))
+				copy(newPath, path)
+				newPath = append(newPath, neighbor)
+				queue.PushBack(newPath)
 			}
 		}
 	}
