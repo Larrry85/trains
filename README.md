@@ -17,6 +17,7 @@ There are valid train routes, for example:
  ```
 go run . maps/01london.txt waterloo st_pancras 2
  ```
+Test text file of correct cases is found in the maps directory. 
 
 ### Invalid maps
 
@@ -25,6 +26,7 @@ There are maps that contain errors, for example:
 ```
 go run . maps/errors/10no-start-station_london.txt waterloo victoria 4
 ```
+Test text file of incorrect cases is found in the maps/errors directory.
 
 ## Coders
 
