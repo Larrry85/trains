@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"container/list"
 	"errors"
 	"fmt"
 	"os"
@@ -58,7 +59,7 @@ func main() {
 	}
 
 	// Find all paths between start and end station
-	paths := findAllPaths(graph, startStation, endStation)
+	paths := findShortestPaths(graph, startStation, endStation)
 
 	// Print all routes found
 	fmt.Println("All possible routes:")
@@ -198,62 +199,63 @@ func readMap(filePath string) (*Graph, error) {
 	return graph, nil
 }
 
-func findAllPaths(graph *Graph, start, end string) [][]string {
+func findShortestPaths(graph *Graph, start, end string) [][]string {
+	paths := [][]string{}
+	queue := list.New()
+	queue.PushBack([]string{start})
 	visited := make(map[string]bool)
-	var paths [][]string
-	currentPath := []string{start}
-	findPaths(graph, start, end, visited, currentPath, &paths)
-	return paths
-}
 
-func findPaths(graph *Graph, current, end string, visited map[string]bool, currentPath []string, paths *[][]string) {
-	visited[current] = true
+	for queue.Len() > 0 {
+		path := queue.Remove(queue.Front()).([]string)
+		current := path[len(path)-1]
 
-	if current == end {
-		*paths = append(*paths, append([]string{}, currentPath...))
-	} else {
-		for _, neighbor := range graph.connections[current] {
-			if !visited[neighbor] {
-				currentPath = append(currentPath, neighbor)
-				findPaths(graph, neighbor, end, visited, currentPath, paths)
-				currentPath = currentPath[:len(currentPath)-1]
+		if current == end {
+			paths = append(paths, path)
+		}
+
+		if !visited[current] {
+			visited[current] = true
+			for _, neighbor := range graph.connections[current] {
+				if !visited[neighbor] {
+					newPath := make([]string, len(path))
+					copy(newPath, path)
+					newPath = append(newPath, neighbor)
+					queue.PushBack(newPath)
+				}
 			}
 		}
 	}
 
-	visited[current] = false
+	return paths
 }
 
 func distributeTrains(paths [][]string, numTrains int) []int {
 	trainAssignments := make([]int, numTrains)
-
-	// Calculate the number of trains to assign per route
-	trainsPerRoute := numTrains / len(paths)
-	extraTrains := numTrains % len(paths)
-
-	// Prioritize paths by their length (shorter paths first)
-	sort.Slice(paths, func(i, j int) bool {
-		return len(paths[i]) < len(paths[j])
+	// Use a priority queue to assign trains based on path lengths
+	pathLengths := make([]PathLength, len(paths))
+	for i, path := range paths {
+		pathLengths[i] = PathLength{index: i, length: len(path)}
+	}
+	sort.Slice(pathLengths, func(i, j int) bool {
+		return pathLengths[i].length < pathLengths[j].length
 	})
 
-	// Assign trains to paths from shortest to longest
-	for i := 0; i < len(paths); i++ {
-		numTrainsForPath := trainsPerRoute
-		if i < extraTrains {
-			numTrainsForPath++
-		}
-		for j := 0; j < numTrainsForPath; j++ {
-			trainAssignments[i*trainsPerRoute+j] = i
-		}
+	for i := 0; i < numTrains; i++ {
+		trainAssignments[i] = pathLengths[i%len(paths)].index
 	}
 
 	return trainAssignments
 }
 
+type PathLength struct {
+	index  int
+	length int
+}
+
 func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 	numTrains := len(trainAssignments)
 	trainPositions := make([]int, numTrains)
-	stationQueues := make(map[string][]int)
+	stationQueues := make(map[string]*list.List)
 
 	// Initialize trains with colors
 	trains := make([]string, numTrains)
@@ -274,7 +276,10 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 	for i := range trainPositions {
 		trainPositions[i] = 0
 		startStation := paths[trainAssignments[i]][0]
-		stationQueues[startStation] = append(stationQueues[startStation], i)
+		if stationQueues[startStation] == nil {
+			stationQueues[startStation] = list.New()
+		}
+		stationQueues[startStation].PushBack(i)
 	}
 
 	// Main simulation loop
@@ -292,13 +297,15 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 				nextStation := path[trainPositions[i]+1]
 
 				// Check if this train is next in line at current station
-				if len(stationQueues[currentStation]) > 0 && stationQueues[currentStation][0] == i {
+				if stationQueues[currentStation] != nil && stationQueues[currentStation].Front().Value.(int) == i {
 					// Check if next station is free from incoming trains
 					nextStationFree := true
-					for _, trainIdx := range stationQueues[nextStation] {
-						if trainPositions[trainIdx] == trainPositions[i]+1 {
-							nextStationFree = false
-							break
+					if stationQueues[nextStation] != nil {
+						for e := stationQueues[nextStation].Front(); e != nil; e = e.Next() {
+							if trainPositions[e.Value.(int)] == trainPositions[i]+1 {
+								nextStationFree = false
+								break
+							}
 						}
 					}
 
@@ -307,13 +314,18 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 
 						// Update train's position and station queues
 						trainPositions[i]++
-						stationQueues[currentStation] = stationQueues[currentStation][1:]
+						stationQueues[currentStation].Remove(stationQueues[currentStation].Front())
 
 						// Remove train from current station queue when it reaches end station
 						if nextStation == path[len(path)-1] {
-							stationQueues[nextStation] = stationQueues[nextStation][:0]
+							if stationQueues[nextStation] != nil {
+								stationQueues[nextStation].Remove(stationQueues[nextStation].Front())
+							}
 						} else {
-							stationQueues[nextStation] = append(stationQueues[nextStation], i)
+							if stationQueues[nextStation] == nil {
+								stationQueues[nextStation] = list.New()
+							}
+							stationQueues[nextStation].PushBack(i)
 						}
 					}
 				}
