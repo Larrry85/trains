@@ -2,9 +2,11 @@ package main
 
 import (
 	"bufio"
+	"container/list"
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -56,15 +58,25 @@ func main() {
 		return
 	}
 
-	// Run Dijkstra's algorithm
-	path, err := dijkstra(graph, startStation, endStation)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		return
+	// Find all paths between start and end station
+	paths := findShortestPaths(graph, startStation, endStation)
+
+	// Print all routes found
+	fmt.Println("All possible routes:")
+	for i, path := range paths {
+		fmt.Printf("Route %d: %v\n", i+1, path)
+		fmt.Println()
 	}
 
-	// Print train movements
-	printTrainMovements(path, numTrains)
+	// Distribute trains across all routes
+	trainAssignments := distributeTrains(paths, numTrains)
+
+	// Simulate train movements across all routes
+	totalMovements := simulateTrainMovements(paths, trainAssignments)
+
+	// Print the total movements
+	fmt.Printf("Total Movements: %d\n", totalMovements)
+	fmt.Println("***********")
 }
 
 func readMap(filePath string) (*Graph, error) {
@@ -187,59 +199,64 @@ func readMap(filePath string) (*Graph, error) {
 	return graph, nil
 }
 
-func dijkstra(graph *Graph, start, end string) ([]string, error) {
-	dist := make(map[string]int)
-	prev := make(map[string]string)
-	unvisited := make(map[string]bool)
+func findShortestPaths(graph *Graph, start, end string) [][]string {
+	paths := [][]string{}
+	queue := list.New()
+	queue.PushBack([]string{start})
+	visited := make(map[string]bool)
 
-	for station := range graph.stations {
-		dist[station] = 1<<31 - 1 // equivalent to infinity
-		unvisited[station] = true
-	}
-	dist[start] = 0
+	for queue.Len() > 0 {
+		path := queue.Remove(queue.Front()).([]string)
+		current := path[len(path)-1]
 
-	for len(unvisited) > 0 {
-		var u string
-		minDist := 1<<31 - 1
-		for station := range unvisited {
-			if dist[station] < minDist {
-				minDist = dist[station]
-				u = station
-			}
+		if current == end {
+			paths = append(paths, path)
 		}
 
-		if u == end {
-			break
-		}
-
-		delete(unvisited, u)
-
-		for _, neighbor := range graph.connections[u] {
-			if !unvisited[neighbor] {
-				continue
-			}
-
-			alt := dist[u] + 1
-			if alt < dist[neighbor] {
-				dist[neighbor] = alt
-				prev[neighbor] = u
+		if !visited[current] {
+			visited[current] = true
+			for _, neighbor := range graph.connections[current] {
+				if !visited[neighbor] {
+					newPath := make([]string, len(path))
+					copy(newPath, path)
+					newPath = append(newPath, neighbor)
+					queue.PushBack(newPath)
+				}
 			}
 		}
 	}
 
-	path := []string{}
-	for u := end; u != ""; u = prev[u] {
-		path = append([]string{u}, path...)
-	}
-
-	if len(path) == 0 || path[0] != start {
-		return nil, errors.New("no path exists between the start and end stations")
-	}
-
-	return path, nil
+	return paths
 }
 
-func printTrainMovements(path []string, numTrains int) {
+func distributeTrains(paths [][]string, numTrains int) []int {
+	trainAssignments := make([]int, numTrains)
+	// Use a priority queue to assign trains based on path lengths
+	pathLengths := make([]PathLength, len(paths))
+	for i, path := range paths {
+		pathLengths[i] = PathLength{index: i, length: len(path)}
+	}
+	sort.Slice(pathLengths, func(i, j int) bool {
+		return pathLengths[i].length < pathLengths[j].length
+	})
+
+	for i := 0; i < numTrains; i++ {
+		trainAssignments[i] = pathLengths[i%len(paths)].index
+	}
+
+	return trainAssignments
+}
+
+type PathLength struct {
+	index  int
+	length int
+}
+
+func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
+	numTrains := len(trainAssignments)
+	trainPositions := make([]int, numTrains)
+	stationQueues := make(map[string]*list.List)
+
 	// Initialize trains with colors
 	trains := make([]string, numTrains)
 	for i := 0; i < numTrains; i++ {
@@ -255,40 +272,40 @@ func printTrainMovements(path []string, numTrains int) {
 		}
 	}
 
-	// Track trains waiting to enter each station
-	stationQueues := make(map[string][]int)
-
-	// Initialize train positions on the path
-	trainPositions := make([]int, numTrains)
+	// Initialize train positions and station queues
 	for i := range trainPositions {
 		trainPositions[i] = 0
-		stationQueues[path[0]] = append(stationQueues[path[0]], i)
+		startStation := paths[trainAssignments[i]][0]
+		if stationQueues[startStation] == nil {
+			stationQueues[startStation] = list.New()
+		}
+		stationQueues[startStation].PushBack(i)
 	}
 
-	// Maximum steps to prevent infinite loops
-	maxSteps := 1000
-	var steps int
-
 	// Main simulation loop
-	for steps = 0; steps < maxSteps; steps++ {
+	var steps int // Initialize steps counter
+	for steps = 0; ; steps++ {
 		var moveLine []string
 		allTrainsAtEnd := true
 
 		// Process each train
 		for i := 0; i < numTrains; i++ {
+			path := paths[trainAssignments[i]]
 			if trainPositions[i] < len(path)-1 {
 				allTrainsAtEnd = false
 				currentStation := path[trainPositions[i]]
 				nextStation := path[trainPositions[i]+1]
 
 				// Check if this train is next in line at current station
-				if len(stationQueues[currentStation]) > 0 && stationQueues[currentStation][0] == i {
+				if stationQueues[currentStation] != nil && stationQueues[currentStation].Front().Value.(int) == i {
 					// Check if next station is free from incoming trains
 					nextStationFree := true
-					for _, trainIdx := range stationQueues[nextStation] {
-						if trainPositions[trainIdx] == trainPositions[i]+1 {
-							nextStationFree = false
-							break
+					if stationQueues[nextStation] != nil {
+						for e := stationQueues[nextStation].Front(); e != nil; e = e.Next() {
+							if trainPositions[e.Value.(int)] == trainPositions[i]+1 {
+								nextStationFree = false
+								break
+							}
 						}
 					}
 
@@ -297,8 +314,19 @@ func printTrainMovements(path []string, numTrains int) {
 
 						// Update train's position and station queues
 						trainPositions[i]++
-						stationQueues[currentStation] = stationQueues[currentStation][1:]
-						stationQueues[nextStation] = append(stationQueues[nextStation], i)
+						stationQueues[currentStation].Remove(stationQueues[currentStation].Front())
+
+						// Remove train from current station queue when it reaches end station
+						if nextStation == path[len(path)-1] {
+							if stationQueues[nextStation] != nil {
+								stationQueues[nextStation].Remove(stationQueues[nextStation].Front())
+							}
+						} else {
+							if stationQueues[nextStation] == nil {
+								stationQueues[nextStation] = list.New()
+							}
+							stationQueues[nextStation].PushBack(i)
+						}
 					}
 				}
 			}
@@ -313,19 +341,14 @@ func printTrainMovements(path []string, numTrains int) {
 		if allTrainsAtEnd {
 			break
 		}
-	}
 
-	// Check if simulation exceeded maximum steps
-	if steps >= maxSteps {
-		fmt.Fprintln(os.Stderr, "Error: Simulation exceeded maximum number of steps, possible infinite loop detected")
-		return
+		// Add a check to prevent potential infinite loops
+		if steps > 2*numTrains*len(paths[0]) {
+			fmt.Fprintln(os.Stderr, "Error: Simulation exceeded maximum steps, possible infinite loop detected")
+			return steps
+		}
 	}
 
 	// Print movements count
-	fmt.Println()
-	fmt.Printf("Movements: %d\n", steps)
-	fmt.Println()
-
-	// Print "***********"
-	fmt.Println("***********")
+	return steps
 }
