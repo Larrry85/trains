@@ -8,64 +8,106 @@ For each review question, valid train movements must be verified. This question 
     A train moves more than once per train movement turn.
 
 
-
-It finds more than one valid route for 3 trains between waterloo and st_pancras in the London Network Map
-
-It finds more than one valid route for 4 trains between waterloo and st_pancras in the London Network Map
-
-It finds more than one valid route for 100 trains between waterloo and st_pancras in the London Network Map
-
+------------------------------------------------------------------------------------------
+go run . maps/01london.txt waterloo st_pancras 1
+------------------------------------------------------------------------------------------
 It finds only a single valid route for 1 train between waterloo and st_pancras in the London Network Map
 
+T1-victoria
+T1-st_pancras
+Total Movements: 2
 
 ------------------------------------------------------------------------------------------
 go run . maps/01london.txt waterloo st_pancras 2
 ------------------------------------------------------------------------------------------
-
 It can find more than one route for 2 trains between waterloo and st_pancras for the London Network Map
 
-# London Network Map
-
-stations:
-waterloo,3,1
-victoria,6,7
-euston,11,23
-st_pancras,5,15
-
-connections:
-waterloo-victoria
-waterloo-euston
-st_pancras-euston
-victoria-st_pancras
+T1-victoria T2-euston
+T1-st_pancras T2-st_pancras
+Total Movements: 2
 
 ------------------------------------------------------------------------------------------
+go run . maps/01london.txt waterloo st_pancras 3
+------------------------------------------------------------------------------------------
+It finds more than one valid route for 3 trains between waterloo and st_pancras in the London Network Map
 
-It prints the train movements with the correct format "T1-station", "T2-station" etc.
+T1-victoria T2-euston
+T1-st_pancras T2-st_pancras T3-victoria
+T3-st_pancras
+Total Movements: 3
+
+------------------------------------------------------------------------------------------
+go run . maps/01london.txt waterloo st_pancras 4
+------------------------------------------------------------------------------------------
+It finds more than one valid route for 4 trains between waterloo and st_pancras in the London Network Map
 
 T1-victoria T2-euston
 T1-st_pancras T2-st_pancras T3-victoria T4-euston
 T3-st_pancras T4-st_pancras
+Movements: 3
 
+------------------------------------------------------------------------------------------
+go run . maps/01london.txt waterloo st_pancras 100
+------------------------------------------------------------------------------------------
+It finds more than one valid route for 100 trains between waterloo and st_pancras in the London Network Map
 
+T1-victoria T2-euston
+T1-st_pancras T2-st_pancras T3-victoria T4-euston
+T3-st_pancras T4-st_pancras T5-victoria T6-euston
+T5-st_pancras T6-st_pancras T7-victoria T8-euston
+T7-st_pancras T8-st_pancras T9-victoria T10-euston
+T9-st_pancras T10-st_pancras T11-victoria T12-euston
+T11-st_pancras T12-st_pancras T13-victoria T14-euston
+T13-st_pancras T14-st_pancras T15-victoria T16-euston
+T15-st_pancras T16-st_pancras T17-victoria T18-euston
+T17-st_pancras T18-st_pancras T19-victoria T20-euston
+T19-st_pancras T20-st_pancras T21-victoria T22-euston
+T21-st_pancras T22-st_pancras T23-victoria T24-euston
+T23-st_pancras T24-st_pancras T25-victoria T26-euston
+T25-st_pancras T26-st_pancras T27-victoria T28-euston
+T27-st_pancras T28-st_pancras T29-victoria T30-euston
+T29-st_pancras T30-st_pancras T31-victoria T32-euston
+T31-st_pancras T32-st_pancras T33-victoria T34-euston
+T33-st_pancras T34-st_pancras T35-victoria T36-euston
+T35-st_pancras T36-st_pancras T37-victoria T38-euston
+T37-st_pancras T38-st_pancras T39-victoria T40-euston
+T39-st_pancras T40-st_pancras T41-victoria T42-euston
+T41-st_pancras T42-st_pancras T43-victoria T44-euston
+T43-st_pancras T44-st_pancras T45-victoria T46-euston
+T45-st_pancras T46-st_pancras T47-victoria T48-euston
+T47-st_pancras T48-st_pancras T49-victoria T50-euston
+T49-st_pancras T50-st_pancras T51-victoria T52-euston
+T51-st_pancras T52-st_pancras T53-victoria T54-euston
+T53-st_pancras T54-st_pancras T55-victoria T56-euston
+T55-st_pancras T56-st_pancras T57-victoria T58-euston
+T57-st_pancras T58-st_pancras T59-victoria T60-euston
+T59-st_pancras T60-st_pancras T61-victoria T62-euston
+T61-st_pancras T62-st_pancras T63-victoria T64-euston
+T63-st_pancras T64-st_pancras T65-victoria T66-euston
+T65-st_pancras T66-st_pancras T67-victoria T68-euston
+T67-st_pancras T68-st_pancras T69-victoria T70-euston
+T69-st_pancras T70-st_pancras T71-victoria T72-euston
+T71-st_pancras T72-st_pancras T73-victoria T74-euston
+T73-st_pancras T74-st_pancras T75-victoria T76-euston
+T75-st_pancras T76-st_pancras T77-victoria T78-euston
+T77-st_pancras T78-st_pancras T79-victoria T80-euston
+T79-st_pancras T80-st_pancras T81-victoria T82-euston
+T81-st_pancras T82-st_pancras T83-victoria T84-euston
+T83-st_pancras T84-st_pancras T85-victoria T86-euston
+T85-st_pancras T86-st_pancras T87-victoria T88-euston
+T87-st_pancras T88-st_pancras T89-victoria T90-euston
+T89-st_pancras T90-st_pancras T91-victoria T92-euston
+T91-st_pancras T92-st_pancras T93-victoria T94-euston
+T93-st_pancras T94-st_pancras T95-victoria T96-euston
+T95-st_pancras T96-st_pancras T97-victoria T98-euston
+T97-st_pancras T98-st_pancras T99-victoria T100-euston
+T99-st_pancras T100-st_pancras
+Total Movements: 51
 
 ------------------------------------------------------------------------------------------
 go run . maps/02bond.txt bond_square space_port 4
 ------------------------------------------------------------------------------------------
-
 It completes the movements in no more than 6 turns for 4 trains between bond_square and space_port
-
-stations:
-bond_square,20,6
-apple_avenue,7,7
-orange_junction,6,1
-space_port,1,11
-
-connections:
-bond_square-apple_avenue
-apple_avenue-orange_junction
-orange_junction-space_port
-
-------------------------------
 
 T1-apple_avenue
 T1-orange_junction T2-apple_avenue
@@ -73,50 +115,12 @@ T1-space_port T2-orange_junction T3-apple_avenue
 T2-space_port T3-orange_junction T4-apple_avenue
 T3-space_port T4-orange_junction
 T4-space_port
+Movements: 6
 
 ------------------------------------------------------------------------------------------
 go run . maps/03jungle.txt jungle desert 10
 ------------------------------------------------------------------------------------------
-
 It completes the movements in no more than 8 turns for 10 trains between jungle and desert
-
-
-stations:
-jungle,5,16
-green_belt,6,1
-village,5,7
-mountain,9,16
-treetop,0,4
-grasslands,15,13
-suburbs,4,9
-clouds,0,0
-wetlands,2,12
-farms,11,10
-downtown,4,4
-metropolis,3,20
-industrial,1,18
-desert,9,0
-
-connections:
-jungle-grasslands
-mountain-treetop
-clouds-wetlands
-downtown-metropolis
-green_belt-village
-suburbs-clouds
-industrial-desert
-jungle-farms
-village-mountain
-wetlands-desert
-grasslands-suburbs
-jungle-green_belt
-farms-downtown
-treetop-desert
-metropolis-industrial
-mountain-wetlands
-farms-mountain
-
-------------------------------
 
 T1-grasslands T2-farms T3-green_belt
 T1-suburbs T2-downtown T3-village T4-grasslands T5-farms T6-green_belt
@@ -126,25 +130,12 @@ T1-desert T2-desert T3-desert T4-wetlands T5-industrial T6-treetop T7-clouds T8-
 T4-desert T5-desert T6-desert T7-wetlands T8-industrial T9-treetop T10-clouds
 T7-desert T8-desert T9-desert T10-wetlands
 T10-desert
+Movements: 8
 
 ------------------------------------------------------------------------------------------
 go run . maps/04beginning.txt beginning terminus 20
 ------------------------------------------------------------------------------------------
-
 It completes the movements in no more than 11 turns for 20 trains between beginning and terminus
-
-stations:
-beginning,0,0
-near,1,0
-far,1,3
-terminus,0,3
-connections:
-beginning-near
-beginning-terminus
-near-far
-terminus-far
-
-------------------------------
 
 T1-terminus T2-near
 T2-far T3-terminus T4-near
@@ -157,32 +148,12 @@ T12-terminus T14-far T15-terminus T16-near
 T14-terminus T16-far T17-terminus T18-near
 T16-terminus T18-far T19-terminus
 T18-terminus T20-terminus
+Movements: 11
 
 ------------------------------------------------------------------------------------------
 go run . maps/05one.txt two four 4
 ------------------------------------------------------------------------------------------
-
 It completes the movements in no more than 6 turns for 4 trains between two and four
-
-
-stations:
-one,1,1
-two,2,2
-three,3,3
-four,4,4
-five,5,5
-six,6,6
-
-connections:
-two-three
-five-one
-three-one
-two-five
-one-four
-six-two
-one-six
-
-------------------------------
 
 T1-three
 T1-one T2-three
@@ -190,32 +161,12 @@ T1-four T2-one T3-three
 T2-four T3-one T4-three
 T3-four T4-one
 T4-four
+Movements: 6
 
 ------------------------------------------------------------------------------------------
 go run . maps/06beethoven.txt beethoven part 9
 ------------------------------------------------------------------------------------------
-
 It completes the movements in no more than 6 turns for 9 trains between beethoven and part
-
-stations:
-beethoven,1,6
-verdi,7,1
-albinoni,1,1
-handel,3,14
-mozart,14,9
-part,10,0
-
-connections:
-beethoven-handel
-handel-mozart
-beethoven-verdi
-verdi-part
-verdi-albinoni
-beethoven-albinoni
-albinoni-mozart
-mozart-part
-
-------------------------------
 
 T1-verdi T3-handel
 T1-part T2-verdi T3-mozart T5-handel
@@ -223,81 +174,12 @@ T2-part T3-part T4-verdi T5-mozart T7-handel
 T4-part T5-part T6-verdi T7-mozart T9-handel
 T6-part T7-part T8-verdi T9-mozart
 T8-part T9-part
+Movements: 6
 
 ------------------------------------------------------------------------------------------
 go run . maps/07small.txt small large 9
 ------------------------------------------------------------------------------------------
-
 It completes the movements in no more than 8 turns for 9 trains between small and large
-
-
-stations:
-small,4,0
-large,4,6
-00,0,0
-01,0,1
-02,0,2
-03,0,3
-04,0,4
-05,0,5
-10,1,0
-11,1,1
-12,1,2
-13,1,3
-14,1,4
-15,1,5
-20,2,0
-21,2,1
-22,2,2
-23,2,3
-24,2,4
-25,2,5
-30,3,0
-31,3,1
-32,3,2
-33,3,3
-34,3,4
-35,3,5
-36,3,6
-
-connections:
-24-25
-24-23
-23-12
-small-32
-32-33
-33-34
-34-35
-35-36
-36-22
-small-10
-10-11
-10-20
-11-12
-11-14
-12-large
-12-03
-small-13
-13-14
-14-15
-small-00
-00-01
-01-02
-02-03
-03-04
-20-21
-20-25
-21-15
-21-22
-21-30
-22-large
-25-30
-30-31
-31-large
-04-05
-05-large
-
-------------------------------
 
 T1-10 T4-13 T6-00
 T1-11 T2-10 T4-14 T5-13 T6-01
@@ -307,6 +189,8 @@ T2-large T3-12 T4-22 T5-21 T6-04 T7-11 T8-10 T9-15
 T3-large T4-large T5-22 T6-05 T7-12 T8-11 T9-21
 T5-large T6-large T7-large T8-12 T9-22
 T8-large T9-large
+Movements: 8
+
 
 ------------------------------------------------------------------------------------------
 
@@ -315,6 +199,7 @@ Additional command line arguments can be used to power extras and bonuses. But t
 It works with additional tricky cases.
 
 Challenge the pathfinder with as many examples as you like, including ones with many stations and many trains.
+
 
 ------------------------------------------------------------------------------------------
 errors 08 - 23
@@ -344,7 +229,7 @@ go run . maps/errors/12same-start-end_london.txt waterloo victoria 4
 It displays "Error" on stderr when the start and end station are the same.
 
 13
-???????????
+go run . maps/errors/13no-path_london.txt waterloo st_pancras 4
 It displays "Error" on stderr when no path exists between the start and end stations.
 
 14
@@ -392,10 +277,9 @@ go run . maps/errors/23over-tenK.txt station2 station4 4
 It displays "Error" on stderr when a map contains more than 10000 stations.
 
 
-
-
+------------------------------------------------------------------------------------------
 Extra
-
+------------------------------------------------------------------------------------------
 
 It implements advanced Error handling.
 For example, it displays
@@ -409,4 +293,3 @@ It names problematic entities, or specifies the line on which the error occurs. 
 A suite of tests have been created in advance, covering the cases described in this review.
 
 It runs quickly. It does not hang excessively.
-

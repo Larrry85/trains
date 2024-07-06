@@ -6,6 +6,7 @@ go run . maps/01london.txt waterloo 4
 go run . maps/errors/11no-end-station_london.txt waterloo victoria 4
 go run . maps/01london.txt waterloo waterloo 4
 go run . maps/errors/12same-start-end_london.txt waterloo victoria 4
+go run . maps/errors/13no-path_london.txt waterloo st_pancras 4
 go run . maps/errors/14duplicate-routes_london.txt waterloo victoria 4
 go run . maps/01london.txt waterloo victoria -4
 go run . maps/errors/16no-valid-coord_london.txt waterloo victoria 4
