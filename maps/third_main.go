@@ -214,7 +214,6 @@ func readMap(filePath string) (*Graph, error) {
 	return graph, nil
 }
 
-
 func findShortestPaths(graph *Graph, start, end string) [][]string {
 	paths := [][]string{}
 	queue := list.New()
