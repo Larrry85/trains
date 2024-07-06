@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -62,7 +61,7 @@ func main() {
 	paths := findShortestPaths(graph, startStation, endStation)
 
 	// Print all routes found
-	fmt.Println("All possible routes:")
+	fmt.Println("Fastest routes:")
 	for i, path := range paths {
 		fmt.Printf("Route %d: %v\n", i+1, path)
 		fmt.Println()
@@ -174,14 +173,6 @@ func readMap(filePath string) (*Graph, error) {
 			connectionCount++
 		}
 
-		// Check station and connection count
-		if stationCount > 10000 {
-			return nil, errors.New("map contains more than 10000 stations")
-		}
-
-		if connectionCount > 10000 {
-			return nil, errors.New("map contains more than 10000 connections")
-		}
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -231,25 +222,14 @@ func findShortestPaths(graph *Graph, start, end string) [][]string {
 
 func distributeTrains(paths [][]string, numTrains int) []int {
 	trainAssignments := make([]int, numTrains)
-	// Use a priority queue to assign trains based on path lengths
-	pathLengths := make([]PathLength, len(paths))
-	for i, path := range paths {
-		pathLengths[i] = PathLength{index: i, length: len(path)}
-	}
-	sort.Slice(pathLengths, func(i, j int) bool {
-		return pathLengths[i].length < pathLengths[j].length
-	})
+	numPaths := len(paths)
 
+	// Assign trains across all paths in a round-robin manner
 	for i := 0; i < numTrains; i++ {
-		trainAssignments[i] = pathLengths[i%len(paths)].index
+		trainAssignments[i] = i % numPaths
 	}
 
 	return trainAssignments
-}
-
-type PathLength struct {
-	index  int
-	length int
 }
 
 func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
