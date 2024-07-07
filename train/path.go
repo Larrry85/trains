@@ -1,10 +1,10 @@
-package pathfinder
+// path.go
+package train
 
 import (
 	"container/heap"
 	"fmt"
 	"slices"
-	"stations/parser"
 	"strings"
 )
 
@@ -45,7 +45,7 @@ func (pq *PriorityQueue) Pop() interface{} {
 	return item
 }
 
-func buildAdjacencyList(connections parser.Connections) map[string][]string {
+func buildAdjacencyList(connections Connections) map[string][]string {
 	adjacencyList := make(map[string][]string)
 	for _, connection := range connections {
 		adjacencyList[connection.Start] = append(adjacencyList[connection.Start], connection.End)
@@ -54,7 +54,7 @@ func buildAdjacencyList(connections parser.Connections) map[string][]string {
 	return adjacencyList
 }
 
-func FindShortestPath(start, end string, connections parser.Connections) ([]string, bool) {
+func FindShortestPath(start, end string, connections Connections) ([]string, bool) {
 	adjacencyList := buildAdjacencyList(connections)
 	pq := make(PriorityQueue, 0)
 	heap.Init(&pq)
@@ -103,7 +103,7 @@ func FindShortestPath(start, end string, connections parser.Connections) ([]stri
 	return nil, false
 }
 
-func ScheduleTrainMovements(start, end string, connections parser.Connections, numTrains int) []string {
+func ScheduleTrainMovements(start, end string, connections Connections, numTrains int) []string {
 	var movements []string
 	occupied := make(map[string]int)
 	trains := []string{}
@@ -209,7 +209,7 @@ func allTrainsReachedEnd(trainPositions map[string]string, end string) bool {
 	return true
 }
 
-func FindAllPaths(start, end string, connections parser.Connections) ([][]string, bool) {
+func FindAllPaths(start, end string, connections Connections) ([][]string, bool) {
 	adjacencyList := buildAdjacencyList(connections)
 	var paths [][]string
 	queue := [][]string{{start}}

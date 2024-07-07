@@ -1,10 +1,10 @@
+// main.go
 package main
 
 import (
 	"fmt"
 	"os"
-	"stations/parser"
-	"stations/pathfinder"
+	"stations/train"
 	"strconv"
 )
 
@@ -44,7 +44,7 @@ func main() {
 		return
 	}
 
-	movements := pathfinder.ScheduleTrainMovements(startStation, endStation, connections, numTrains)
+	movements := train.ScheduleTrainMovements(startStation, endStation, connections, numTrains)
 
 	fmt.Println("Train movements:")
 	for _, move := range movements {
@@ -54,17 +54,17 @@ func main() {
 	fmt.Printf("\nTotal number of movements: %d\n", len(movements))
 }
 
-func readMap(filePath string) (parser.Connections, error) {
+func readMap(filePath string) (train.Connections, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	return parser.ParseConnections(file)
+	return train.ParseConnections(file)
 }
 
-func isValidStation(connections parser.Connections, station string) bool {
+func isValidStation(connections train.Connections, station string) bool {
 	for _, connection := range connections {
 		if connection.Start == station || connection.End == station {
 			return true
