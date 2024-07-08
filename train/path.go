@@ -1,4 +1,3 @@
-// path.go
 package train
 
 import (
@@ -8,32 +7,32 @@ import (
 	"strings"
 )
 
-// Item represents an item in the priority queue used for Dijkstra's algorithm
+// Item represents an element in the priority queue with a value, priority, and index.
 type Item struct {
-	value    string // Station name
-	priority int    // Priority or distance from start
-	index    int    // Index of the item in the heap
+	value    string
+	priority int
+	index    int
 }
 
-// PriorityQueue implements a priority queue based on heap.Interface
+// PriorityQueue implements a priority queue using a slice of Items.
 type PriorityQueue []*Item
 
-// Len returns the length of the priority queue
+// Len returns the length of the priority queue.
 func (pq PriorityQueue) Len() int { return len(pq) }
 
-// Less compares items based on priority
+// Less returns true if the priority of item i is less than the priority of item j.
 func (pq PriorityQueue) Less(i, j int) bool {
 	return pq[i].priority < pq[j].priority
 }
 
-// Swap swaps two items in the priority queue
+// Swap swaps the elements with indexes i and j in the priority queue.
 func (pq PriorityQueue) Swap(i, j int) {
 	pq[i], pq[j] = pq[j], pq[i]
 	pq[i].index = i
 	pq[j].index = j
 }
 
-// Push adds an item to the priority queue
+// Push adds an item x to the priority queue.
 func (pq *PriorityQueue) Push(x interface{}) {
 	n := len(*pq)
 	item := x.(*Item)
@@ -41,7 +40,7 @@ func (pq *PriorityQueue) Push(x interface{}) {
 	*pq = append(*pq, item)
 }
 
-// Pop removes and returns the item with the highest priority from the priority queue
+// Pop removes and returns the item with the highest priority from the priority queue.
 func (pq *PriorityQueue) Pop() interface{} {
 	old := *pq
 	n := len(old)
@@ -52,7 +51,16 @@ func (pq *PriorityQueue) Pop() interface{} {
 	return item
 }
 
-// buildAdjacencyList creates an adjacency list from the given connections
+// Connection represents a connection between two stations.
+type Connection struct {
+	Start string
+	End   string
+}
+
+// Connections is a slice of Connection.
+type Connections []Connection
+
+// buildAdjacencyList builds an adjacency list from connections.
 func buildAdjacencyList(connections Connections) map[string][]string {
 	adjacencyList := make(map[string][]string)
 	for _, connection := range connections {
@@ -62,7 +70,7 @@ func buildAdjacencyList(connections Connections) map[string][]string {
 	return adjacencyList
 }
 
-// FindShortestPath finds the shortest path between start and end stations using Dijkstra's algorithm
+// FindShortestPath finds the shortest path from start to end using Dijkstra's algorithm.
 func FindShortestPath(start, end string, connections Connections) ([]string, bool) {
 	adjacencyList := buildAdjacencyList(connections)
 	pq := make(PriorityQueue, 0)
@@ -72,9 +80,9 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 	distances := make(map[string]int)
 	previous := make(map[string]string)
 
-	// Initialize distances to infinity (maximum integer value)
+	// Initialize distances to infinity
 	for station := range adjacencyList {
-		distances[station] = int(^uint(0) >> 1) // Max int
+		distances[station] = int(^uint(0) >> 1) // Infinity
 	}
 	distances[start] = 0
 
@@ -85,7 +93,6 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 		currentStation := currentItem.value
 
 		if currentStation == end {
-			// Reconstruct the path from start to end
 			path := []string{}
 			for at := end; at != ""; at = previous[at] {
 				path = append([]string{at}, path...)
@@ -98,7 +105,6 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 		}
 		visited[currentStation] = true
 
-		// Explore neighbors
 		for _, neighbor := range adjacencyList[currentStation] {
 			if visited[neighbor] {
 				continue
@@ -112,41 +118,40 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 		}
 	}
 
-	// No path found
 	return nil, false
 }
 
-// ScheduleTrainMovements schedules movements for trains from start to end stations
+// ScheduleTrainMovements schedules the movements of multiple trains from start to end.
 func ScheduleTrainMovements(start, end string, connections Connections, numTrains int) []string {
 	var movements []string
 	occupied := make(map[string]int)
-	trains := []string{}
+	trains := make([]string, numTrains)
 	trainPositions := make(map[string]string)
 
-	// Initialize trains at the start station
+	// Initialize trains and their positions
 	for i := 0; i < numTrains; i++ {
 		train := fmt.Sprintf("T%d", i+1)
-		trains = append(trains, train)
+		trains[i] = train
 		trainPositions[train] = start
 	}
 
-	// Find the shortest path from start to end
+	// Precompute the shortest path using Dijkstra's algorithm
 	spath, _ := FindShortestPath(start, end, connections)
-	step := 0
 
-	// Loop until all trains reach the end station or max 8 moves reached
-	for !allTrainsReachedEnd(trainPositions, end) && step < 8 {
+	step := 0
+	maxSteps := 100 // Limit steps to avoid infinite loop
+
+	for !allTrainsReachedEnd(trainPositions, end) && step < maxSteps {
 		trainsPaths := make(map[string][]string)
 		var moves []string
 		nextOccupied := make(map[string]int)
 
-		// Iterate over each train
 		for i, train := range trains {
 			if trainPositions[train] != end {
 				var path []string
 				reachedDestinationOr1TurnAway := true
 
-				// Check other trains' paths to avoid collision
+				// Check paths of other trains to determine optimal route for this train
 				for j := 1; j <= i; j++ {
 					if trainPositions[fmt.Sprintf("T%d", j)] != end {
 						tPath := trainsPaths[fmt.Sprintf("T%d", j)]
@@ -156,14 +161,15 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 					}
 				}
 
-				// Determine path for the current train
 				if step == 0 && i == 0 {
 					path = spath
 				} else if i == len(trains)-1 && reachedDestinationOr1TurnAway && len(spath) == 2 {
 					path = spath
 				} else {
+					// Find all possible paths from current position to end
 					allPaths, found := FindAllPaths(trainPositions[train], end, connections)
 					if found {
+						// Choose the best path based on overlap and other criteria
 						for _, p := range allPaths {
 							isGood := true
 							for k := 1; k <= i; k++ {
@@ -193,7 +199,6 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 					}
 				}
 
-				// Move the train if a valid path is found
 				if len(path) > 0 {
 					trainsPaths[train] = path
 					nextPos := path[1]
@@ -219,7 +224,7 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 			occupied[station] = count
 		}
 
-		// Record movements if there are any
+		// Add movements to result if there are any
 		if len(moves) > 0 {
 			movements = append(movements, strings.Join(moves, " "))
 			step++
@@ -229,7 +234,45 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 	return movements
 }
 
-// allTrainsReachedEnd checks if all trains have reached the end station
+// FindAllPaths finds all possible paths from start to end.
+func FindAllPaths(start, end string, connections Connections) ([][]string, bool) {
+	adjacencyList := buildAdjacencyList(connections)
+	var paths [][]string
+	queue := [][]string{{start}}
+
+	for len(queue) > 0 {
+		path := queue[0]
+		queue = queue[1:]
+		current := path[len(path)-1]
+
+		if current == end {
+			paths = append(paths, path)
+		} else {
+			for _, neighbor := range adjacencyList[current] {
+				if !contains(path, neighbor) {
+					newPath := append([]string{}, path...)
+					newPath = append(newPath, neighbor)
+					queue = append(queue, newPath)
+				}
+			}
+		}
+	}
+
+	return paths, len(paths) > 0
+}
+
+// CountOverlap counts the number of overlapping stations between two paths.
+func CountOverlap(path1, path2 []string) int {
+	count := 0
+	for _, station := range path1 {
+		if contains(path2, station) {
+			count++
+		}
+	}
+	return count
+}
+
+// allTrainsReachedEnd checks if all trains have reached the end station.
 func allTrainsReachedEnd(trainPositions map[string]string, end string) bool {
 	for _, pos := range trainPositions {
 		if pos != end {
@@ -239,53 +282,14 @@ func allTrainsReachedEnd(trainPositions map[string]string, end string) bool {
 	return true
 }
 
-// FindAllPaths finds all paths from start to end using BFS
-func FindAllPaths(start, end string, connections Connections) ([][]string, bool) {
-	adjacencyList := buildAdjacencyList(connections)
-	var paths [][]string
-	queue := [][]string{{start}}
-
-	for len(queue) > 0 {
-		path := queue[0]
-		queue = queue[1:]
-		last := path[len(path)-1]
-
-		if last == end {
-			paths = append(paths, path)
-		}
-
-		for _, neighbor := range adjacencyList[last] {
-			if !contains(path, neighbor) {
-				newPath := append([]string{}, path...)
-				newPath = append(newPath, neighbor)
-				queue = append(queue, newPath)
-			}
-		}
-	}
-
-	return paths, len(paths) > 0
-}
-
-// CountOverlap counts the number of overlapping stations between two paths
-func CountOverlap(path1, path2 []string) int {
-	overlapCount := 0
-	for i, s1 := range path1 {
-		if i >= len(path2) {
-			break
-		}
-		if s1 == path2[i] {
-			overlapCount++
-		}
-	}
-	return overlapCount
-}
-
-// contains checks if a slice contains a specific item
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
+// contains checks if a slice contains a specific element.
+func contains(slice []string, elem string) bool {
+	for _, e := range slice {
+		if e == elem {
 			return true
 		}
 	}
 	return false
 }
+
+// slices package and functions like Equal and Index are assumed to be defined elsewhere

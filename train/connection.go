@@ -1,3 +1,4 @@
+// connection.go
 package train
 
 import (
@@ -7,15 +8,6 @@ import (
 	"io"
 	"strings"
 )
-
-// Connection represents a direct connection between two stations.
-type Connection struct {
-	Start string // Starting station
-	End   string // Ending station
-}
-
-// Connections is a slice of Connection, representing multiple train connections.
-type Connections []Connection
 
 // ParseConnections reads connections from an input reader and parses them into a Connections slice.
 func ParseConnections(r io.Reader) (Connections, error) {
