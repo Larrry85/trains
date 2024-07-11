@@ -21,68 +21,67 @@ type Graph struct {
 }
 
 func main() {
-    if len(os.Args) != 5 {
-        fmt.Fprintln(os.Stderr, "Error: Incorrect number of arguments")
-        return
-    }
+	if len(os.Args) != 5 {
+		fmt.Fprintln(os.Stderr, "Error: Incorrect number of arguments")
+		return
+	}
 
-    filePath := os.Args[1]
-    startStation := os.Args[2]
-    endStation := os.Args[3]
-    numTrains, err := strconv.Atoi(os.Args[4])
-    if err != nil || numTrains <= 0 {
-        fmt.Fprintln(os.Stderr, "Error: Number of trains must be a positive integer")
-        return
-    }
+	filePath := os.Args[1]
+	startStation := os.Args[2]
+	endStation := os.Args[3]
+	numTrains, err := strconv.Atoi(os.Args[4])
+	if err != nil || numTrains <= 0 {
+		fmt.Fprintln(os.Stderr, "Error: Number of trains must be a positive integer")
+		return
+	}
 
-    graph, err := readMap(filePath)
-    if err != nil {
-        fmt.Fprintln(os.Stderr, "Error:", err)
-        return
-    }
+	graph, err := readMap(filePath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error:", err)
+		return
+	}
 
-    if _, exists := graph.stations[startStation]; !exists {
-        fmt.Fprintln(os.Stderr, "Error: Start station does not exist")
-        return
-    }
+	if _, exists := graph.stations[startStation]; !exists {
+		fmt.Fprintln(os.Stderr, "Error: Start station does not exist")
+		return
+	}
 
-    if _, exists := graph.stations[endStation]; !exists {
-        fmt.Fprintln(os.Stderr, "Error: End station does not exist")
-        return
-    }
+	if _, exists := graph.stations[endStation]; !exists {
+		fmt.Fprintln(os.Stderr, "Error: End station does not exist")
+		return
+	}
 
-    // Check for same start and end station
-    if startStation == endStation {
-        fmt.Fprintln(os.Stderr, "Error: Start and end station cannot be the same")
-        return
-    }
+	// Check for same start and end station
+	if startStation == endStation {
+		fmt.Fprintln(os.Stderr, "Error: Start and end station cannot be the same")
+		return
+	}
 
-    // Find all shortest paths between start and end station
-    shortestPaths := findShortestPaths(graph, startStation, endStation)
+	// Find all shortest paths between start and end station
+	shortestPaths := findShortestPaths(graph, startStation, endStation)
 
-    if len(shortestPaths) == 0 {
-        fmt.Fprintln(os.Stderr, "Error: No path exists between the start and end stations")
-        return
-    }
+	if len(shortestPaths) == 0 {
+		fmt.Fprintln(os.Stderr, "Error: No path exists between the start and end stations")
+		return
+	}
 
-    // Print all shortest paths found
-    fmt.Println("Shortest path(s) found:")
-    for i, path := range shortestPaths {
-        fmt.Printf("Path %d: %v\n", i+1, path)
-        fmt.Println()
-    }
+	// Print all shortest paths found
+	fmt.Println("Shortest path(s) found:")
+	for i, path := range shortestPaths {
+		fmt.Printf("Path %d: %v\n", i+1, path)
+		fmt.Println()
+	}
 
-    // Distribute trains across the shortest paths
-    trainAssignments := distributeTrainsInCycles(shortestPaths, numTrains)
+	// Distribute trains across the shortest paths
+	trainAssignments := distributeTrainsInCycles(shortestPaths, numTrains)
 
-    // Simulate train movements across the shortest paths
-    totalMovements := simulateTrainMovements(shortestPaths, trainAssignments)
+	// Simulate train movements across the shortest paths
+	totalMovements := simulateTrainMovements(shortestPaths, trainAssignments)
 
-    // Print the total movements
-    fmt.Printf("Total Movements: %d\n", totalMovements)
-    fmt.Println("***********")
+	// Print the total movements
+	fmt.Printf("Total Movements: %d\n", totalMovements)
+	fmt.Println("***********")
 }
-
 
 func readMap(filePath string) (*Graph, error) {
 	file, err := os.Open(filePath)
@@ -225,63 +224,62 @@ func readMap(filePath string) (*Graph, error) {
 }
 
 func findShortestPaths(graph *Graph, start, end string) [][]string {
-    // Dijkstra's algorithm to find all shortest paths from start to end
-    type State struct {
-        cost     int
-        path     []string
-        lastNode string
-    }
+	// Dijkstra's algorithm to find all shortest paths from start to end
+	type State struct {
+		cost     int
+		path     []string
+		lastNode string
+	}
 
-    // Priority queue for Dijkstra's algorithm
-    pq := priorityQueue{}
-    heap.Init(&pq)
+	// Priority queue for Dijkstra's algorithm
+	pq := priorityQueue{}
+	heap.Init(&pq)
 
-    // Map to store the shortest paths
-    shortestPaths := [][]string{}
-    visited := make(map[string]bool)
+	// Map to store the shortest paths
+	shortestPaths := [][]string{}
+	visited := make(map[string]bool)
 
-    // Push the initial state into the priority queue
-    initialState := State{cost: 0, path: []string{start}, lastNode: start}
-    heap.Push(&pq, &Item{value: &initialState, priority: 0})
+	// Push the initial state into the priority queue
+	initialState := State{cost: 0, path: []string{start}, lastNode: start}
+	heap.Push(&pq, &Item{value: &initialState, priority: 0})
 
-    for pq.Len() > 0 {
-        // Pop the state with the smallest cost
-        current := heap.Pop(&pq).(*Item).value.(*State)
+	for pq.Len() > 0 {
+		// Pop the state with the smallest cost
+		current := heap.Pop(&pq).(*Item).value.(*State)
 
-        // Check if we reached the end station
-        if current.lastNode == end {
-            shortestPaths = append(shortestPaths, current.path)
-            continue
-        }
+		// Check if we reached the end station
+		if current.lastNode == end {
+			shortestPaths = append(shortestPaths, current.path)
+			continue
+		}
 
-        // Skip processing if the node has been visited
-        if visited[current.lastNode] {
-            continue
-        }
-        visited[current.lastNode] = true
+		// Skip processing if the node has been visited
+		if visited[current.lastNode] {
+			continue
+		}
+		visited[current.lastNode] = true
 
-        // Explore neighbors
-        for _, neighbor := range graph.connections[current.lastNode] {
-            if !visited[neighbor] {
-                // Calculate the cost to reach the neighbor
-                newCost := current.cost + 1 // Assuming each connection has equal cost (can be adjusted if needed)
+		// Explore neighbors
+		for _, neighbor := range graph.connections[current.lastNode] {
+			if !visited[neighbor] {
+				// Calculate the cost to reach the neighbor
+				newCost := current.cost + 1 // Assuming each connection has equal cost (can be adjusted if needed)
 
-                // Create a new state for the neighbor
-                newPath := make([]string, len(current.path))
-                copy(newPath, current.path)
-                newPath = append(newPath, neighbor)
+				// Create a new state for the neighbor
+				newPath := make([]string, len(current.path))
+				copy(newPath, current.path)
+				newPath = append(newPath, neighbor)
 
-                newState := State{cost: newCost, path: newPath, lastNode: neighbor}
+				newState := State{cost: newCost, path: newPath, lastNode: neighbor}
 
-                // Push the new state into the priority queue
-                heap.Push(&pq, &Item{value: &newState, priority: newCost})
-            }
-        }
-    }
+				// Push the new state into the priority queue
+				heap.Push(&pq, &Item{value: &newState, priority: newCost})
+			}
+		}
+	}
 
-    return shortestPaths
+	return shortestPaths
 }
-
 
 type Item struct {
 	value    interface{}
@@ -303,22 +301,22 @@ func (pq *priorityQueue) Pop() interface{} {
 }
 
 func distributeTrainsInCycles(paths [][]string, numTrains int) []int {
-    numPaths := len(paths)
-    trainAssignments := make([]int, numTrains)
+	numPaths := len(paths)
+	trainAssignments := make([]int, numTrains)
 
-    // Distribute trains across the paths in a balanced way
-    for i := 0; i < numTrains; i++ {
-        trainAssignments[i] = i % numPaths
-    }
+	// Distribute trains across the paths in a balanced way
+	for i := 0; i < numTrains; i++ {
+		trainAssignments[i] = i % numPaths
+	}
 
-    // Print the train assignments in cycles
-    fmt.Println("Train assignments in cycles:")
-    for i, assignment := range trainAssignments {
-        fmt.Printf("Train %d assigned to Path %d: %v\n", i+1, assignment+1, paths[assignment])
-    }
-    fmt.Println()
+	// Print the train assignments in cycles
+	fmt.Println("Train assignments in cycles:")
+	for i, assignment := range trainAssignments {
+		fmt.Printf("Train %d assigned to Path %d: %v\n", i+1, assignment+1, paths[assignment])
+	}
+	fmt.Println()
 
-    return trainAssignments
+	return trainAssignments
 }
 
 func simulateTrainMovements(paths [][]string, trainAssignments []int) int {

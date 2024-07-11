@@ -1,4 +1,3 @@
-// connection.go
 package train
 
 import (
@@ -13,7 +12,9 @@ import (
 func ParseConnections(r io.Reader) (Connections, error) {
 	scanner := bufio.NewScanner(r)
 	connections := Connections{}
+	foundStationsSection := false
 	foundConnectionsSection := false
+	stations := make(map[string]bool)           // To track valid stations
 	visitedConnections := make(map[string]bool) // To track visited connections
 	duplicateErrors := make(map[string]bool)    // To track duplicate errors
 
@@ -21,13 +22,16 @@ func ParseConnections(r io.Reader) (Connections, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// Check if the line starts with "connections:"
-		if strings.HasPrefix(line, "connections:") {
+		// Check if the line starts with "stations:" or "connections:"
+		if strings.HasPrefix(line, "stations:") {
+			foundStationsSection = true
+			continue // Skip the section header line
+		} else if strings.HasPrefix(line, "connections:") {
 			foundConnectionsSection = true
 			continue // Skip the section header line
 		}
 
-		// If we have not found the "connections:" section yet, skip this line
+		// If we have not found the "stations:" or "connections:" section yet, skip this line
 		if !foundConnectionsSection {
 			continue
 		}
@@ -40,6 +44,17 @@ func ParseConnections(r io.Reader) (Connections, error) {
 		}
 
 		start, end := parts[0], parts[1]
+
+		// Track valid stations in the "stations:" section
+		if foundStationsSection {
+			stations[start] = true
+			stations[end] = true
+		}
+
+		// Check if stations referenced in connections exist in the "stations:" section
+		if !stations[start] || !stations[end] {
+			return nil, fmt.Errorf("station %s referenced in connections but not defined in stations section", start)
+		}
 
 		// Check for duplicate connection and reverse connection
 		if visitedConnections[start+"-"+end] || visitedConnections[end+"-"+start] {
@@ -61,7 +76,10 @@ func ParseConnections(r io.Reader) (Connections, error) {
 		})
 	}
 
-	// Check if we found the "connections:" section
+	// Check if we found both the "stations:" and "connections:" sections
+	if !foundStationsSection {
+		return nil, errors.New("map file does not contain a 'stations:' section")
+	}
 	if !foundConnectionsSection {
 		return nil, errors.New("map file does not contain a 'connections:' section")
 	}

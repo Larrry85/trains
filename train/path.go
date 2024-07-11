@@ -3,7 +3,6 @@ package train
 import (
 	"container/heap"
 	"fmt"
-	"slices"
 	"strings"
 )
 
@@ -51,26 +50,33 @@ func (pq *PriorityQueue) Pop() interface{} {
 	return item
 }
 
-// Connection represents a connection between two stations.
+// Connection represents a connection between two stations with a travel time.
 type Connection struct {
 	Start string
 	End   string
+	Time  int
 }
 
 // Connections is a slice of Connection.
 type Connections []Connection
 
-// buildAdjacencyList builds an adjacency list from connections.
-func buildAdjacencyList(connections Connections) map[string][]string {
-	adjacencyList := make(map[string][]string)
+// buildAdjacencyList builds an adjacency list from connections with travel times.
+func buildAdjacencyList(connections Connections) map[string]map[string]int {
+	adjacencyList := make(map[string]map[string]int)
 	for _, connection := range connections {
-		adjacencyList[connection.Start] = append(adjacencyList[connection.Start], connection.End)
-		adjacencyList[connection.End] = append(adjacencyList[connection.End], connection.Start)
+		if adjacencyList[connection.Start] == nil {
+			adjacencyList[connection.Start] = make(map[string]int)
+		}
+		if adjacencyList[connection.End] == nil {
+			adjacencyList[connection.End] = make(map[string]int)
+		}
+		adjacencyList[connection.Start][connection.End] = connection.Time
+		adjacencyList[connection.End][connection.Start] = connection.Time
 	}
 	return adjacencyList
 }
 
-// FindShortestPath finds the shortest path from start to end using Dijkstra's algorithm.
+// FindShortestPath finds the fastest path from start to end using Dijkstra's algorithm.
 func FindShortestPath(start, end string, connections Connections) ([]string, bool) {
 	adjacencyList := buildAdjacencyList(connections)
 	pq := make(PriorityQueue, 0)
@@ -105,11 +111,11 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 		}
 		visited[currentStation] = true
 
-		for _, neighbor := range adjacencyList[currentStation] {
+		for neighbor, travelTime := range adjacencyList[currentStation] {
 			if visited[neighbor] {
 				continue
 			}
-			newDist := distances[currentStation] + 1
+			newDist := distances[currentStation] + travelTime
 			if newDist < distances[neighbor] {
 				distances[neighbor] = newDist
 				previous[neighbor] = currentStation
@@ -135,8 +141,8 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 		trainPositions[train] = start
 	}
 
-	// Precompute the shortest path using Dijkstra's algorithm
-	spath, _ := FindShortestPath(start, end, connections)
+	// Precompute the fastest path using Dijkstra's algorithm
+	fpath, _ := FindShortestPath(start, end, connections)
 
 	step := 0
 	maxSteps := 100 // Limit steps to avoid infinite loop
@@ -162,9 +168,9 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 				}
 
 				if step == 0 && i == 0 {
-					path = spath
-				} else if i == len(trains)-1 && reachedDestinationOr1TurnAway && len(spath) == 2 {
-					path = spath
+					path = fpath
+				} else if i == len(trains)-1 && reachedDestinationOr1TurnAway && len(fpath) == 2 {
+					path = fpath
 				} else {
 					// Find all possible paths from current position to end
 					allPaths, found := FindAllPaths(trainPositions[train], end, connections)
@@ -180,15 +186,15 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 							}
 							isDuplicate := false
 							for j := 1; j <= i; j++ {
-								if slices.Equal(p, trainsPaths[fmt.Sprintf("T%d", j)]) {
+								if slicesEqual(p, trainsPaths[fmt.Sprintf("T%d", j)]) {
 									isDuplicate = true
 								}
 							}
 							if nextOccupied[p[1]] == 0 && !contains(p[1:], start) && !isDuplicate && isGood {
-								if len(p) > len(spath)+2 {
-									if contains(spath, trainPositions[train]) {
-										ind := slices.Index(spath, trainPositions[train])
-										path = spath[ind:]
+								if len(p) > len(fpath)+2 {
+									if contains(fpath, trainPositions[train]) {
+										ind := slicesIndex(fpath, trainPositions[train])
+										path = fpath[ind:]
 									}
 								} else {
 									path = p
@@ -248,9 +254,9 @@ func FindAllPaths(start, end string, connections Connections) ([][]string, bool)
 		if current == end {
 			paths = append(paths, path)
 		} else {
-			for _, neighbor := range adjacencyList[current] {
+			for neighbor := range adjacencyList[current] {
 				if !contains(path, neighbor) {
-					newPath := append([]string{}, path...)
+					newPath := append([]string(nil), path...)
 					newPath = append(newPath, neighbor)
 					queue = append(queue, newPath)
 				}
@@ -261,15 +267,52 @@ func FindAllPaths(start, end string, connections Connections) ([][]string, bool)
 	return paths, len(paths) > 0
 }
 
-// CountOverlap counts the number of overlapping stations between two paths.
-func CountOverlap(path1, path2 []string) int {
+// CountOverlap counts the number of overlapping elements between two slices.
+func CountOverlap(a, b []string) int {
 	count := 0
-	for _, station := range path1 {
-		if contains(path2, station) {
+	set := make(map[string]bool)
+	for _, v := range a {
+		set[v] = true
+	}
+	for _, v := range b {
+		if set[v] {
 			count++
 		}
 	}
 	return count
+}
+
+// contains checks if a slice contains a string.
+func contains(slice []string, item string) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+// slicesEqual checks if two slices are equal.
+func slicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// slicesIndex returns the index of the first occurrence of item in slice.
+func slicesIndex(slice []string, item string) int {
+	for i, v := range slice {
+		if v == item {
+			return i
+		}
+	}
+	return -1
 }
 
 // allTrainsReachedEnd checks if all trains have reached the end station.
@@ -281,15 +324,3 @@ func allTrainsReachedEnd(trainPositions map[string]string, end string) bool {
 	}
 	return true
 }
-
-// contains checks if a slice contains a specific element.
-func contains(slice []string, elem string) bool {
-	for _, e := range slice {
-		if e == elem {
-			return true
-		}
-	}
-	return false
-}
-
-// slices package and functions like Equal and Index are assumed to be defined elsewhere
