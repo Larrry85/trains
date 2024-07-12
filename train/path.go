@@ -145,7 +145,7 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 	fpath, _ := FindShortestPath(start, end, connections)
 
 	step := 0
-	maxSteps := 100 // Limit steps to avoid infinite loop
+	maxSteps := 30000 // Limit steps to avoid infinite loop
 
 	for !allTrainsReachedEnd(trainPositions, end) && step < maxSteps {
 		trainsPaths := make(map[string][]string)
