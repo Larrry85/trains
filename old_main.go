@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"stations/gofiles"
 	"strconv"
 	"strings"
 )
@@ -58,7 +59,8 @@ func main() {
 	}
 
 	// Find all shortest paths between start and end station
-	shortestPaths := findShortestPaths(graph, startStation, endStation)
+	findPath := len(graph.connections)
+	shortestPaths := findShortestPaths(findPath, graph, startStation, endStation)
 
 	if len(shortestPaths) == 0 {
 		fmt.Fprintln(os.Stderr, "Error: No path exists between the start and end stations")
@@ -223,7 +225,10 @@ func readMap(filePath string) (*Graph, error) {
 	return graph, nil
 }
 
-func findShortestPaths(graph *Graph, start, end string) [][]string {
+func findShortestPaths(findPath int, graph *Graph, start, end string) [][]string {
+	if findPath >= 20 {
+		return gofiles.Paths(findPath, start, end, graph.connections)
+	}
 	// Dijkstra's algorithm to find all shortest paths from start to end
 	type State struct {
 		cost     int
