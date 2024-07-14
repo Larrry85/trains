@@ -1,33 +1,37 @@
-package pathfinder
+package train
 
 import (
 	"container/heap"
 	"fmt"
-	"slices"
-	"stations/parser"
 	"strings"
 )
 
+// Item represents an element in the priority queue with a value, priority, and index.
 type Item struct {
 	value    string
 	priority int
 	index    int
 }
 
+// PriorityQueue implements a priority queue using a slice of Items.
 type PriorityQueue []*Item
 
+// Len returns the length of the priority queue.
 func (pq PriorityQueue) Len() int { return len(pq) }
 
+// Less returns true if the priority of item i is less than the priority of item j.
 func (pq PriorityQueue) Less(i, j int) bool {
 	return pq[i].priority < pq[j].priority
 }
 
+// Swap swaps the elements with indexes i and j in the priority queue.
 func (pq PriorityQueue) Swap(i, j int) {
 	pq[i], pq[j] = pq[j], pq[i]
 	pq[i].index = i
 	pq[j].index = j
 }
 
+// Push adds an item x to the priority queue.
 func (pq *PriorityQueue) Push(x interface{}) {
 	n := len(*pq)
 	item := x.(*Item)
@@ -35,26 +39,45 @@ func (pq *PriorityQueue) Push(x interface{}) {
 	*pq = append(*pq, item)
 }
 
+// Pop removes and returns the item with the highest priority from the priority queue.
 func (pq *PriorityQueue) Pop() interface{} {
 	old := *pq
 	n := len(old)
 	item := old[n-1]
-	old[n-1] = nil
+	old[n-1] = nil // Avoid memory leak
 	item.index = -1
 	*pq = old[0 : n-1]
 	return item
 }
 
-func buildAdjacencyList(connections parser.Connections) map[string][]string {
-	adjacencyList := make(map[string][]string)
+// Connection represents a connection between two stations with a travel time.
+type Connection struct {
+	Start string
+	End   string
+	Time  int
+}
+
+// Connections is a slice of Connection.
+type Connections []Connection
+
+// buildAdjacencyList builds an adjacency list from connections with travel times.
+func buildAdjacencyList(connections Connections) map[string]map[string]int {
+	adjacencyList := make(map[string]map[string]int)
 	for _, connection := range connections {
-		adjacencyList[connection.Start] = append(adjacencyList[connection.Start], connection.End)
-		adjacencyList[connection.End] = append(adjacencyList[connection.End], connection.Start)
+		if adjacencyList[connection.Start] == nil {
+			adjacencyList[connection.Start] = make(map[string]int)
+		}
+		if adjacencyList[connection.End] == nil {
+			adjacencyList[connection.End] = make(map[string]int)
+		}
+		adjacencyList[connection.Start][connection.End] = connection.Time
+		adjacencyList[connection.End][connection.Start] = connection.Time
 	}
 	return adjacencyList
 }
 
-func FindShortestPath(start, end string, connections parser.Connections) ([]string, bool) {
+// FindShortestPath finds the fastest path from start to end using Dijkstra's algorithm.
+func FindShortestPath(start, end string, connections Connections) ([]string, bool) {
 	adjacencyList := buildAdjacencyList(connections)
 	pq := make(PriorityQueue, 0)
 	heap.Init(&pq)
@@ -63,8 +86,9 @@ func FindShortestPath(start, end string, connections parser.Connections) ([]stri
 	distances := make(map[string]int)
 	previous := make(map[string]string)
 
+	// Initialize distances to infinity
 	for station := range adjacencyList {
-		distances[station] = int(^uint(0) >> 1) // Max int
+		distances[station] = int(^uint(0) >> 1) // Infinity
 	}
 	distances[start] = 0
 
@@ -87,11 +111,11 @@ func FindShortestPath(start, end string, connections parser.Connections) ([]stri
 		}
 		visited[currentStation] = true
 
-		for _, neighbor := range adjacencyList[currentStation] {
+		for neighbor, travelTime := range adjacencyList[currentStation] {
 			if visited[neighbor] {
 				continue
 			}
-			newDist := distances[currentStation] + 1
+			newDist := distances[currentStation] + travelTime
 			if newDist < distances[neighbor] {
 				distances[neighbor] = newDist
 				previous[neighbor] = currentStation
@@ -103,23 +127,27 @@ func FindShortestPath(start, end string, connections parser.Connections) ([]stri
 	return nil, false
 }
 
-func ScheduleTrainMovements(start, end string, connections parser.Connections, numTrains int) []string {
-	finalPath := len(parser.Connection)
-
+// ScheduleTrainMovements schedules the movements of multiple trains from start to end.
+func ScheduleTrainMovements(start, end string, connections Connections, numTrains int) []string {
 	var movements []string
 	occupied := make(map[string]int)
-	trains := []string{}
+	trains := make([]string, numTrains)
 	trainPositions := make(map[string]string)
 
+	// Initialize trains and their positions
 	for i := 0; i < numTrains; i++ {
 		train := fmt.Sprintf("T%d", i+1)
-		trains = append(trains, train)
+		trains[i] = train
 		trainPositions[train] = start
 	}
-	spath, _ := FindShortestPath(start, end, connections)
-	step := 0
 
-	for !allTrainsReachedEnd(trainPositions, end) {
+	// Precompute the fastest path using Dijkstra's algorithm
+	fpath, _ := FindShortestPath(start, end, connections)
+
+	step := 0
+	maxSteps := 100 // Limit steps to avoid infinite loop
+
+	for !allTrainsReachedEnd(trainPositions, end) && step < maxSteps {
 		trainsPaths := make(map[string][]string)
 		var moves []string
 		nextOccupied := make(map[string]int)
@@ -128,6 +156,8 @@ func ScheduleTrainMovements(start, end string, connections parser.Connections, n
 			if trainPositions[train] != end {
 				var path []string
 				reachedDestinationOr1TurnAway := true
+
+				// Check paths of other trains to determine optimal route for this train
 				for j := 1; j <= i; j++ {
 					if trainPositions[fmt.Sprintf("T%d", j)] != end {
 						tPath := trainsPaths[fmt.Sprintf("T%d", j)]
@@ -136,13 +166,16 @@ func ScheduleTrainMovements(start, end string, connections parser.Connections, n
 						}
 					}
 				}
+
 				if step == 0 && i == 0 {
-					path = spath
-				} else if i == len(trains)-1 && reachedDestinationOr1TurnAway && len(spath) == 2 {
-					path = spath
+					path = fpath
+				} else if i == len(trains)-1 && reachedDestinationOr1TurnAway && len(fpath) == 2 {
+					path = fpath
 				} else {
+					// Find all possible paths from current position to end
 					allPaths, found := FindAllPaths(trainPositions[train], end, connections)
 					if found {
+						// Choose the best path based on overlap and other criteria
 						for _, p := range allPaths {
 							isGood := true
 							for k := 1; k <= i; k++ {
@@ -153,15 +186,15 @@ func ScheduleTrainMovements(start, end string, connections parser.Connections, n
 							}
 							isDuplicate := false
 							for j := 1; j <= i; j++ {
-								if slices.Equal(p, trainsPaths[fmt.Sprintf("T%d", j)]) {
+								if slicesEqual(p, trainsPaths[fmt.Sprintf("T%d", j)]) {
 									isDuplicate = true
 								}
 							}
 							if nextOccupied[p[1]] == 0 && !contains(p[1:], start) && !isDuplicate && isGood {
-								if len(p) > len(spath)+2 {
-									if contains(spath, trainPositions[train]) {
-										ind := slices.Index(spath, trainPositions[train])
-										path = spath[ind:]
+								if len(p) > len(fpath)+2 {
+									if contains(fpath, trainPositions[train]) {
+										ind := slicesIndex(fpath, trainPositions[train])
+										path = fpath[ind:]
 									}
 								} else {
 									path = p
@@ -171,6 +204,7 @@ func ScheduleTrainMovements(start, end string, connections parser.Connections, n
 						}
 					}
 				}
+
 				if len(path) > 0 {
 					trainsPaths[train] = path
 					nextPos := path[1]
@@ -190,28 +224,24 @@ func ScheduleTrainMovements(start, end string, connections parser.Connections, n
 				}
 			}
 		}
+
+		// Update occupied stations
 		for station, count := range nextOccupied {
 			occupied[station] = count
 		}
 
+		// Add movements to result if there are any
 		if len(moves) > 0 {
 			movements = append(movements, strings.Join(moves, " "))
 			step++
 		}
 	}
+
 	return movements
 }
 
-func allTrainsReachedEnd(trainPositions map[string]string, end string) bool {
-	for _, pos := range trainPositions {
-		if pos != end {
-			return false
-		}
-	}
-	return true
-}
-
-func FindAllPaths(start, end string, connections parser.Connections) ([][]string, bool) {
+// FindAllPaths finds all possible paths from start to end.
+func FindAllPaths(start, end string, connections Connections) ([][]string, bool) {
 	adjacencyList := buildAdjacencyList(connections)
 	var paths [][]string
 	queue := [][]string{{start}}
@@ -219,17 +249,17 @@ func FindAllPaths(start, end string, connections parser.Connections) ([][]string
 	for len(queue) > 0 {
 		path := queue[0]
 		queue = queue[1:]
-		last := path[len(path)-1]
+		current := path[len(path)-1]
 
-		if last == end {
+		if current == end {
 			paths = append(paths, path)
-		}
-
-		for _, neighbor := range adjacencyList[last] {
-			if !contains(path, neighbor) {
-				newPath := append([]string{}, path...)
-				newPath = append(newPath, neighbor)
-				queue = append(queue, newPath)
+		} else {
+			for neighbor := range adjacencyList[current] {
+				if !contains(path, neighbor) {
+					newPath := append([]string(nil), path...)
+					newPath = append(newPath, neighbor)
+					queue = append(queue, newPath)
+				}
 			}
 		}
 	}
@@ -237,24 +267,60 @@ func FindAllPaths(start, end string, connections parser.Connections) ([][]string
 	return paths, len(paths) > 0
 }
 
-func CountOverlap(path1, path2 []string) int {
-	overlapCount := 0
-	for i, s1 := range path1 {
-		if i >= len(path2) {
-			break
-		}
-		if s1 == path2[i] {
-			overlapCount++
+// CountOverlap counts the number of overlapping elements between two slices.
+func CountOverlap(a, b []string) int {
+	count := 0
+	set := make(map[string]bool)
+	for _, v := range a {
+		set[v] = true
+	}
+	for _, v := range b {
+		if set[v] {
+			count++
 		}
 	}
-	return overlapCount
+	return count
 }
 
+// contains checks if a slice contains a string.
 func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
+	for _, v := range slice {
+		if v == item {
 			return true
 		}
 	}
 	return false
+}
+
+// slicesEqual checks if two slices are equal.
+func slicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// slicesIndex returns the index of the first occurrence of item in slice.
+func slicesIndex(slice []string, item string) int {
+	for i, v := range slice {
+		if v == item {
+			return i
+		}
+	}
+	return -1
+}
+
+// allTrainsReachedEnd checks if all trains have reached the end station.
+func allTrainsReachedEnd(trainPositions map[string]string, end string) bool {
+	for _, pos := range trainPositions {
+		if pos != end {
+			return false
+		}
+	}
+	return true
 }

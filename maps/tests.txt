@@ -18,7 +18,9 @@ go run . maps/01london.txt waterloo st_pancras 4
 go run . maps/01london.txt waterloo st_pancras 100
 go run . maps/02bond.txt bond_square space_port 4
 go run . maps/03jungle.txt jungle desert 10
-go run . maps/04beginning.txt beginning terminus 20
 go run . maps/05one.txt two four 4
 go run . maps/06beethoven.txt beethoven part 9
+go run . maps/04beginning.txt beginning terminus 20
+go run . maps/tenK.txt station3 station5 5
+
 go run . maps/07small.txt small large 9
