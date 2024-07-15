@@ -1,8 +1,9 @@
-package train
+package pathfinder
 
 import (
 	"container/heap"
 	"fmt"
+	"stations/A"
 	"strings"
 )
 
@@ -129,6 +130,23 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 
 // ScheduleTrainMovements schedules the movements of multiple trains from start to end.
 func ScheduleTrainMovements(start, end string, connections Connections, numTrains int) []string {
+
+	// Convert Connections to a graph representation
+	graph := buildGraph(connections)
+
+	if len(connections) >= 10 {
+		paths := A.Paths(start, end, graph)
+		if len(paths) > 0 {
+			foundPaths := flattenPaths(paths) // This returns [][]string
+
+			// Use foundPaths for output
+			for _, path := range foundPaths {
+				fmt.Println(path)
+			}
+
+		}
+	}
+
 	var movements []string
 	occupied := make(map[string]int)
 	trains := make([]string, numTrains)
@@ -145,9 +163,10 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 	fpath, _ := FindShortestPath(start, end, connections)
 
 	step := 0
-	maxSteps := 30000 // Limit steps to avoid infinite loop
+	maxSteps := 10000 // Limit steps to avoid infinite loop
 
 	for !allTrainsReachedEnd(trainPositions, end) && step < maxSteps {
+
 		trainsPaths := make(map[string][]string)
 		var moves []string
 		nextOccupied := make(map[string]int)
@@ -240,6 +259,15 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 	return movements
 }
 
+// Helper function to flatten paths
+func flattenPaths(paths [][]string) [][]string {
+	var flatPaths [][]string
+	for _, path := range paths {
+		flatPaths = append(flatPaths, path) // Just append the path directly
+	}
+	return flatPaths
+}
+
 // FindAllPaths finds all possible paths from start to end.
 func FindAllPaths(start, end string, connections Connections) ([][]string, bool) {
 	adjacencyList := buildAdjacencyList(connections)
@@ -323,4 +351,13 @@ func allTrainsReachedEnd(trainPositions map[string]string, end string) bool {
 		}
 	}
 	return true
+}
+
+func buildGraph(connections Connections) map[string][]string {
+	graph := make(map[string][]string)
+	for _, conn := range connections {
+		graph[conn.Start] = append(graph[conn.Start], conn.End)
+		graph[conn.End] = append(graph[conn.End], conn.Start) // If undirected
+	}
+	return graph
 }
