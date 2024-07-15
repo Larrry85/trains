@@ -134,7 +134,7 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 	// Convert Connections to a graph representation
 	graph := buildGraph(connections)
 
-	if len(connections) >= 10 {
+	if len(connections) >= 20 {
 		paths := A.Paths(start, end, graph)
 		if len(paths) > 0 {
 			foundPaths := flattenPaths(paths) // This returns [][]string
