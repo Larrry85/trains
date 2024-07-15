@@ -1,4 +1,4 @@
-package main
+/*package main
 
 import (
 	"bufio"
@@ -218,3 +218,4 @@ func visited(path []string, station string) bool {
 	}
 	return false
 }
+*/

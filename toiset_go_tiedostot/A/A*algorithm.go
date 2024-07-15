@@ -16,7 +16,7 @@ type Node struct {
 }
 
 // find routes using A* algorithm
-func Paths(filePath int, start, end string, graph map[string][]string) [][]string {
+func Paths(start, end string, graph map[string][]string) [][]string {
 
 	numberOfPaths := 4
 	trains := make([][]*Node, numberOfPaths)

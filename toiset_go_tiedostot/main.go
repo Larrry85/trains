@@ -1,4 +1,4 @@
-package main
+/*package main
 
 import (
 	"fmt"
@@ -72,3 +72,4 @@ func isValidStation(connections pathfinder.Connections, station string) bool {
 	}
 	return false
 }
+*/
