@@ -3,19 +3,13 @@ package parser
 import (
 	"bufio"
 	"io"
+	"stations/pathfinder"
 	"strings"
 )
 
-type Connection struct {
-	Start string
-	End   string
-}
-
-type Connections []Connection
-
-func ParseConnections(r io.Reader) (Connections, error) {
+func ParseConnections(r io.Reader) (pathfinder.Connections, error) {
 	scanner := bufio.NewScanner(r)
-	connections := Connections{}
+	connections := pathfinder.Connections{}
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -23,7 +17,7 @@ func ParseConnections(r io.Reader) (Connections, error) {
 		if len(parts) != 2 {
 			continue
 		}
-		connections = append(connections, Connection{
+		connections = append(connections, pathfinder.Connection{
 			Start: parts[0],
 			End:   parts[1],
 		})

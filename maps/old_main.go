@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"stations/gofiles"
+	"stations/A"
 	"strconv"
 	"strings"
 )
@@ -226,8 +226,8 @@ func readMap(filePath string) (*Graph, error) {
 }
 
 func findShortestPaths(findPath int, graph *Graph, start, end string) [][]string {
-	if findPath >= 15 {
-		return gofiles.Paths(findPath, start, end, graph.connections)
+	if findPath >= 20 {
+		return A.Paths(findPath, start, end, graph.connections)
 	}
 	// Dijkstra's algorithm to find all shortest paths from start to end
 	type State struct {

@@ -54,7 +54,7 @@ func main() {
 	fmt.Printf("\nTotal number of movements: %d\n", len(movements))
 }
 
-func readMap(filePath string) (parser.Connections, error) {
+func readMap(filePath string) (pathfinder.Connections, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func readMap(filePath string) (parser.Connections, error) {
 	return parser.ParseConnections(file)
 }
 
-func isValidStation(connections parser.Connections, station string) bool {
+func isValidStation(connections pathfinder.Connections, station string) bool {
 	for _, connection := range connections {
 		if connection.Start == station || connection.End == station {
 			return true

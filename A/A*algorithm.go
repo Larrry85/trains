@@ -1,6 +1,8 @@
-package gofiles
+package A
 
-import "container/heap"
+import (
+	"container/heap"
+)
 
 type PriorityQueue []*Node
 
@@ -14,14 +16,16 @@ type Node struct {
 }
 
 // find routes using A* algorithm
-func Paths(finalPath int, start, end string, graph map[string][]string) [][]string {
-	numberOfPaths := 3
+func Paths(filePath int, start, end string, graph map[string][]string) [][]string {
+
+	numberOfPaths := 4
 	trains := make([][]*Node, numberOfPaths)
 
 	remainingPaths := numberOfPaths
 	var result [][]string
 
 	for turn := 0; remainingPaths > 0; turn++ {
+
 		for i := 0; i < numberOfPaths; i++ {
 			if len(trains[i]) > 0 && trains[i][len(trains[i])-1].Station == end {
 				continue // Skip trains that have already reached the destination
@@ -41,6 +45,7 @@ func Paths(finalPath int, start, end string, graph map[string][]string) [][]stri
 					route = append(route, node.Station)
 				}
 				result = append(result, route)
+
 			}
 		}
 	}
