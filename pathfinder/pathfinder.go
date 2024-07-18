@@ -1,4 +1,4 @@
-/*package pathfinder
+package pathfinder
 
 import (
 	"container/heap"
@@ -361,4 +361,3 @@ func buildGraph(connections Connections) map[string][]string {
 	}
 	return graph
 }
-*/
