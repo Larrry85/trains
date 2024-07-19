@@ -104,6 +104,10 @@ func main() {
 	// Simulate train movements across the shortest paths
 	totalMovements := simulateTrainMovements(shortestPaths, trainAssignments)
 
+
+	fmt.Printf("Trains: %d\n", len(trainAssignments))
+
+
 	// Print the total movements
 	fmt.Printf("Total Movements: %d\n", totalMovements)
 	fmt.Print("*************\n\n")
@@ -418,97 +422,110 @@ return item
 }
 
 func distributeTrainsInCycles(paths [][]string, numTrains int) []int {
-numPaths := len(paths)
-trainAssignments := make([]int, numTrains)
-for i := 0; i < numTrains; i++ {
-	trainAssignments[i] = i % numPaths
-}
+	numPaths := len(paths)
+	trainAssignments := make([]int, numTrains)
 
-return trainAssignments
+	for i := 0; i < numTrains; i++ {
+		// Assign paths in a way to ensure adjacent paths are different
+		trainAssignments[i] = i % numPaths
+		if i > 0 && trainAssignments[i] == trainAssignments[i-1] {
+			trainAssignments[i] = (trainAssignments[i] + 1) % numPaths
+		}
+	}
+
+	return trainAssignments
 }
 
 func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
-numTrains := len(trainAssignments)
-trainPositions := make([]int, numTrains)
-stationQueues := make(map[string]*Queue)
-trains := make([]string, numTrains)
-for i := 0; i < numTrains; i++ {
-	switch i % 4 {
-	case 0:
-		trains[i] = fmt.Sprintf("\033[31mT%d\033[0m", i+1)
-	case 1:
-		trains[i] = fmt.Sprintf("\033[33mT%d\033[0m", i+1)
-	case 2:
-		trains[i] = fmt.Sprintf("\033[34mT%d\033[0m", i+1)
-	case 3:
-		trains[i] = fmt.Sprintf("\033[32mT%d\033[0m", i+1)
-	}
-}
-
-for i := range trainPositions {
-	trainPositions[i] = 0
-	startStation := paths[trainAssignments[i]][0]
-	if stationQueues[startStation] == nil {
-		stationQueues[startStation] = NewQueue()
-	}
-	stationQueues[startStation].Push(i)
-}
-
-var steps int
-for steps = 0; ; steps++ {
-	var moveLine []string
-	allTrainsAtEnd := true
+	numTrains := len(trainAssignments)
+	trainPositions := make([]int, numTrains)
+	stationQueues := make(map[string]*Queue)
+	trains := make([]string, numTrains)
+	usedRoutes := make(map[int]struct{}) // To track unique routes used
 
 	for i := 0; i < numTrains; i++ {
-		path := paths[trainAssignments[i]]
-		if trainPositions[i] < len(path)-1 {
-			allTrainsAtEnd = false
-			currentStation := path[trainPositions[i]]
-			nextStation := path[trainPositions[i]+1]
+		switch i % 4 {
+		case 0:
+			trains[i] = fmt.Sprintf("\033[31mT%d\033[0m", i+1)
+		case 1:
+			trains[i] = fmt.Sprintf("\033[33mT%d\033[0m", i+1)
+		case 2:
+			trains[i] = fmt.Sprintf("\033[34mT%d\033[0m", i+1)
+		case 3:
+			trains[i] = fmt.Sprintf("\033[32mT%d\033[0m", i+1)
+		}
+	}
 
-			if stationQueues[currentStation] != nil && stationQueues[currentStation].Front() == i {
-				nextStationFree := true
-				if stationQueues[nextStation] != nil {
-					for _, trainIndex := range stationQueues[nextStation].items {
-						if trainPositions[trainIndex] == trainPositions[i]+1 {
-							nextStationFree = false
-							break
+	for i := range trainPositions {
+		trainPositions[i] = 0
+		startStation := paths[trainAssignments[i]][0]
+		if stationQueues[startStation] == nil {
+			stationQueues[startStation] = NewQueue()
+		}
+		stationQueues[startStation].Push(i)
+	}
+
+	var steps int
+	for steps = 0; ; steps++ {
+		var moveLine []string
+		allTrainsAtEnd := true
+
+		for i := 0; i < numTrains; i++ {
+			path := paths[trainAssignments[i]]
+			if trainPositions[i] < len(path)-1 {
+				allTrainsAtEnd = false
+				currentStation := path[trainPositions[i]]
+				nextStation := path[trainPositions[i]+1]
+
+				if stationQueues[currentStation] != nil && stationQueues[currentStation].Front() == i {
+					nextStationFree := true
+					if stationQueues[nextStation] != nil {
+						for _, trainIndex := range stationQueues[nextStation].items {
+							if trainPositions[trainIndex] == trainPositions[i]+1 {
+								nextStationFree = false
+								break
+							}
 						}
 					}
-				}
 
-				if nextStationFree {
-					moveLine = append(moveLine, fmt.Sprintf("%s-%s", trains[i], nextStation))
-					trainPositions[i]++
-					stationQueues[currentStation].Pop()
+					if nextStationFree {
+						moveLine = append(moveLine, fmt.Sprintf("%s-%s", trains[i], nextStation))
+						trainPositions[i]++
+						stationQueues[currentStation].Pop()
 
-					if nextStation == path[len(path)-1] {
-						delete(stationQueues, nextStation)
-					} else {
-						if stationQueues[nextStation] == nil {
-							stationQueues[nextStation] = NewQueue()
+						if nextStation == path[len(path)-1] {
+							delete(stationQueues, nextStation)
+						} else {
+							if stationQueues[nextStation] == nil {
+								stationQueues[nextStation] = NewQueue()
+							}
+							stationQueues[nextStation].Push(i)
 						}
-						stationQueues[nextStation].Push(i)
+
+						// Track the route used
+						usedRoutes[trainAssignments[i]] = struct{}{}
 					}
 				}
 			}
 		}
+
+		if len(moveLine) > 0 {
+			fmt.Println(strings.Join(moveLine, " "))
+		}
+
+		if allTrainsAtEnd {
+			break
+		}
+
+		if steps > 2*numTrains*len(paths[0]) {
+			fmt.Fprintln(os.Stderr, "Error: Simulation exceeded maximum steps, possible infinite loop detected")
+			return steps
+		}
 	}
 
-	if len(moveLine) > 0 {
-		fmt.Println(strings.Join(moveLine, " "))
-	}
-
-	if allTrainsAtEnd {
-		break
-	}
-
-	if steps > 2*numTrains*len(paths[0]) {
-		fmt.Fprintln(os.Stderr, "Error: Simulation exceeded maximum steps, possible infinite loop detected")
-		return steps
-	}
-}
-
+	// Print the number of routes found, routes used, number of trains, and total movements
+	fmt.Printf("\nRoutes found: %d\n", len(paths))
+	fmt.Printf("Routes used: %d\n", len(usedRoutes))
 return steps
 }
 
