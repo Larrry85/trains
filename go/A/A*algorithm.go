@@ -368,10 +368,10 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 	numTrains := len(trainAssignments)
 	trainPositions := make([]int, numTrains)
 	stationQueues := make(map[string]*Queue)
+	trains := make([]Train, numTrains)
 	fmt.Print("Train movements:\n\n")
 
 	// Initialize trains with colors
-	trains := make([]Train, numTrains)
 	for i := 0; i < numTrains; i++ {
 		color := ""
 		switch i % 4 {
@@ -425,7 +425,8 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 					}
 
 					if nextStationFree {
-						moveLine = append(moveLine, fmt.Sprintf("\033[%smT%d\033[0m-%s", trains[i].Color, trains[i].ID, nextStation))
+						// Color the entire train path string
+						moveLine = append(moveLine, fmt.Sprintf("\033[%smT%d-%s\033[0m", trains[i].Color, trains[i].ID, nextStation))
 
 						// Update train's position and station queues
 						trainPositions[i]++
