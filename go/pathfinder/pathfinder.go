@@ -1,9 +1,9 @@
-/*package pathfinder
+package pathfinder
 
 import (
 	"container/heap"
 	"fmt"
-	"stations/A"
+	"stations/go/A"
 	"strings"
 )
 
@@ -131,20 +131,9 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 // ScheduleTrainMovements schedules the movements of multiple trains from start to end.
 func ScheduleTrainMovements(start, end string, connections Connections, numTrains int) []string {
 
-	// Convert Connections to a graph representation
-	graph := buildGraph(connections)
-
 	if len(connections) >= 20 {
-		paths := A.Paths(start, end, graph)
-		if len(paths) > 0 {
-			foundPaths := flattenPaths(paths) // This returns [][]string
-
-			// Use foundPaths for output
-			for _, path := range foundPaths {
-				fmt.Println(path)
-			}
-
-		}
+		A.PrintResult()
+		return nil
 	}
 
 	var movements []string
@@ -361,4 +350,3 @@ func buildGraph(connections Connections) map[string][]string {
 	}
 	return graph
 }
-*/

@@ -1,10 +1,11 @@
-/*package main
+package main
 
 import (
 	"fmt"
 	"os"
-	"stations/parser"
-	"stations/pathfinder"
+
+	"stations/go/parser"
+	"stations/go/pathfinder"
 	"strconv"
 )
 
@@ -72,4 +73,3 @@ func isValidStation(connections pathfinder.Connections, station string) bool {
 	}
 	return false
 }
-*/

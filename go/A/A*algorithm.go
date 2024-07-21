@@ -1,4 +1,4 @@
-package main
+package A
 
 import (
 	"bufio"
@@ -10,6 +10,17 @@ import (
 	"strings"
 )
 
+type PriorityQueue []*Node
+
+type Node struct {
+	Station  string // The name of the station this node represents.
+	Cost     int    // The cost to reach this node from the start node (typically the number of steps).
+	Priority int    // The priority of this node in the priority queue, often based on cost plus a heuristic estimate.
+	Parent   *Node  // A pointer to the parent node in the path, used to reconstruct the path after reaching the goal.
+	TrainID  int    // The ID of the train that this node represents, ensuring that we track which train is at which node.
+	Time     int    // The time step at which this node is occupied, used to avoid collisions by checking time and station occupancy.
+}
+
 type Station struct {
 	name string
 	x, y int
@@ -20,46 +31,7 @@ type Graph struct {
 	connections map[string][]string
 }
 
-type Node struct {
-	Station  string
-	Cost     int
-	Priority int
-	Parent   *Node
-	TrainID  int
-	Time     int
-}
-
-type PriorityQueue []*Node
-
-func (pq PriorityQueue) Len() int { return len(pq) }
-
-func (pq PriorityQueue) Less(i, j int) bool {
-	return pq[i].Priority < pq[j].Priority
-}
-
-func (pq PriorityQueue) Swap(i, j int) {
-	pq[i], pq[j] = pq[j], pq[i]
-}
-
-func (pq *PriorityQueue) Push(x interface{}) {
-	node := x.(*Node)
-	*pq = append(*pq, node)
-}
-
-func (pq *PriorityQueue) Pop() interface{} {
-	old := *pq
-	n := len(old)
-	node := old[n-1]
-	*pq = old[0 : n-1]
-	return node
-}
-
-func main() {
-	if len(os.Args) != 5 {
-		fmt.Fprintln(os.Stderr, "Error: Incorrect number of arguments")
-		return
-	}
-
+func PrintResult() {
 	filePath := os.Args[1]
 	startStation := os.Args[2]
 	endStation := os.Args[3]
@@ -69,47 +41,29 @@ func main() {
 		return
 	}
 
-	graph, err := readMap(filePath)
+	graph, err := read(filePath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
 		return
 	}
 
-	if _, exists := graph.stations[startStation]; !exists {
-		fmt.Fprintln(os.Stderr, "Error: Start station does not exist")
-		return
-	}
+	shortest := Paths(startStation, endStation, graph.connections)
 
-	if _, exists := graph.stations[endStation]; !exists {
-		fmt.Fprintln(os.Stderr, "Error: End station does not exist")
-		return
-	}
-
-	if startStation == endStation {
-		fmt.Fprintln(os.Stderr, "Error: Start and end station cannot be the same")
-		return
-	}
-
-	// Find all shortest paths between start and end station
-	shortestPaths := findShortestPaths(graph, startStation, endStation)
-
-	if len(shortestPaths) == 0 {
+	if len(shortest) == 0 {
 		fmt.Fprintln(os.Stderr, "Error: No path exists between the start and end stations")
 		return
 	}
 
 	// Distribute trains across the shortest paths
-	trainAssignments := distributeTrainsInCycles(shortestPaths, numTrains)
-
+	assignments := distributeTrainsInCycles(shortest, numTrains)
 	// Simulate train movements across the shortest paths
-	totalMovements := simulateTrainMovements(shortestPaths, trainAssignments)
+	total := simulateTrainMovements(shortest, assignments)
 
 	// Print the total movements
-	fmt.Printf("Total Movements: %d\n", totalMovements)
-	fmt.Print("*************\n\n")
+	fmt.Printf("Total Movements: %d\n", total)
+	fmt.Println("***********")
 }
-
-func readMap(filePath string) (*Graph, error) {
+func read(filePath string) (*Graph, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -147,12 +101,14 @@ func readMap(filePath string) (*Graph, error) {
 		}
 
 		if section == "stations" {
+			// Process station line
 			parts := strings.Split(line, ",")
 			if len(parts) != 3 {
 				return nil, fmt.Errorf("invalid station line: %s", line)
 			}
 
 			name := strings.TrimSpace(parts[0])
+
 			x, err := strconv.Atoi(strings.TrimSpace(parts[1]))
 			if err != nil || x < 0 {
 				return nil, fmt.Errorf("invalid x coordinate for station %s", name)
@@ -176,6 +132,7 @@ func readMap(filePath string) (*Graph, error) {
 			graph.stations[name] = Station{name, x, y}
 			stationCount++
 		} else if section == "connections" {
+			// Process connection line
 			parts := strings.Split(line, "-")
 			if len(parts) != 2 {
 				return nil, fmt.Errorf("invalid connection line: %s", line)
@@ -213,6 +170,7 @@ func readMap(filePath string) (*Graph, error) {
 			connectionCount++
 		}
 
+		// Check station and connection count
 		if stationCount > 10000 {
 			return nil, errors.New("map contains more than 10000 stations")
 		}
@@ -245,27 +203,23 @@ func readMap(filePath string) (*Graph, error) {
 	return graph, nil
 }
 
-func findShortestPaths(graph *Graph, start, end string) [][]string {
-	if len(graph.connections) > 6 {
-		return findPathsAStar(graph, start, end)
-	}
-	return findPathsDijkstra(graph, start, end)
-}
+// find routes using A* algorithm
+func Paths(start, end string, graph map[string][]string) [][]string {
 
-func findPathsAStar(graph *Graph, start, end string) [][]string {
-	numberOfPaths := 4
+	numberOfPaths := 2
 	trains := make([][]*Node, numberOfPaths)
 
 	remainingPaths := numberOfPaths
 	var result [][]string
 
 	for turn := 0; remainingPaths > 0; turn++ {
+
 		for i := 0; i < numberOfPaths; i++ {
 			if len(trains[i]) > 0 && trains[i][len(trains[i])-1].Station == end {
 				continue // Skip trains that have already reached the destination
 			}
 
-			path := cooperativeAStar(start, end, graph.connections, i, trains, turn)
+			path := cooperativeAStar(start, end, graph, i, trains, turn)
 
 			if len(path) == 0 {
 				break
@@ -275,9 +229,11 @@ func findPathsAStar(graph *Graph, start, end string) [][]string {
 				var route []string
 				// Collect movements for each turn starting from the first movement
 				for _, node := range path {
+
 					route = append(route, node.Station)
 				}
 				result = append(result, route)
+
 			}
 		}
 	}
@@ -285,7 +241,8 @@ func findPathsAStar(graph *Graph, start, end string) [][]string {
 	return result
 }
 
-func cooperativeAStar(start, end string, connections map[string][]string, trainID int, trains [][]*Node, startTime int) []*Node {
+// A cooperative version of the A* algorithm that takes into consideration if stations are occupied/used or not.
+func cooperativeAStar(start, end string, data map[string][]string, trainID int, trains [][]*Node, startTime int) []*Node {
 	pq := &PriorityQueue{}
 	heap.Init(pq)
 	startNode := &Node{
@@ -299,6 +256,7 @@ func cooperativeAStar(start, end string, connections map[string][]string, trainI
 
 	visited := make(map[string]bool)
 	var finalPath []*Node
+
 	for pq.Len() > 0 {
 		current := heap.Pop(pq).(*Node)
 
@@ -312,7 +270,7 @@ func cooperativeAStar(start, end string, connections map[string][]string, trainI
 		}
 		visited[current.Station] = true
 
-		for _, neighbor := range connections[current.Station] {
+		for _, neighbor := range data[current.Station] {
 			if isOccupied(neighbor, current.Time+1, trains) {
 				continue
 			}
@@ -335,17 +293,21 @@ func cooperativeAStar(start, end string, connections map[string][]string, trainI
 
 func isOccupied(station string, time int, trains [][]*Node) bool {
 	for _, trainPath := range trains {
+
 		for _, train := range trainPath {
 			if train != nil && train.Station == station && train.Time == time {
 				return true
 			}
 		}
+
 	}
 	return false
 }
 
+// ended up not using this because it's unnecessary. would be useful if the network was significantly bigger than the max limit of this program which is 10k stations
 func heuristic(_, _ string) int {
-	return 1 // Placeholder heuristic function
+	// Implement heuristic function (e.g., Manhattan distance, if applicable)
+	return 1
 }
 
 func reconstructPath(node *Node) []*Node {
@@ -357,72 +319,40 @@ func reconstructPath(node *Node) []*Node {
 	return path
 }
 
-func findPathsDijkstra(graph *Graph, start, end string) [][]string {
-	type State struct {
-		cost     int
-		path     []string
-		lastNode string
-	}
-	pq := &priorityQueue{}
-	heap.Init(pq)
-	startState := &State{cost: 0, path: []string{start}, lastNode: start}
-	heap.Push(pq, &Item{value: startState, priority: 0})
-
-	visited := make(map[string]bool)
-	shortestPaths := [][]string{}
-
-	for pq.Len() > 0 {
-		current := heap.Pop(pq).(*Item).value.(*State)
-
-		if current.lastNode == end {
-			shortestPaths = append(shortestPaths, current.path)
-			continue
-		}
-
-		if visited[current.lastNode] {
-			continue
-		}
-		visited[current.lastNode] = true
-
-		for _, neighbor := range graph.connections[current.lastNode] {
-			if !visited[neighbor] {
-				newCost := current.cost + 1
-				newPath := append([]string(nil), current.path...)
-				newPath = append(newPath, neighbor)
-				newState := &State{cost: newCost, path: newPath, lastNode: neighbor}
-				heap.Push(pq, &Item{value: newState, priority: newCost})
-			}
-		}
-	}
-
-	return shortestPaths
+// Implement heap.Interface for PriorityQueue
+func (pq PriorityQueue) Len() int { return len(pq) }
+func (pq PriorityQueue) Less(i, j int) bool {
+	return pq[i].Priority < pq[j].Priority
 }
-
-type Item struct {
-	value    interface{}
-	priority int
+func (pq PriorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
 }
-
-type priorityQueue []*Item
-
-func (pq priorityQueue) Len() int            { return len(pq) }
-func (pq priorityQueue) Less(i, j int) bool  { return pq[i].priority < pq[j].priority }
-func (pq priorityQueue) Swap(i, j int)       { pq[i], pq[j] = pq[j], pq[i] }
-func (pq *priorityQueue) Push(x interface{}) { *pq = append(*pq, x.(*Item)) }
-func (pq *priorityQueue) Pop() interface{} {
+func (pq *PriorityQueue) Push(x interface{}) {
+	node := x.(*Node)
+	*pq = append(*pq, node)
+}
+func (pq *PriorityQueue) Pop() interface{} {
 	old := *pq
 	n := len(old)
-	item := old[n-1]
+	node := old[n-1]
 	*pq = old[0 : n-1]
-	return item
+	return node
 }
-
 func distributeTrainsInCycles(paths [][]string, numTrains int) []int {
 	numPaths := len(paths)
 	trainAssignments := make([]int, numTrains)
+
+	// Distribute trains across the paths in a balanced way
 	for i := 0; i < numTrains; i++ {
 		trainAssignments[i] = i % numPaths
 	}
+
+	// Print the train assignments in cycles
+	fmt.Println("Train assignments in cycles:")
+	for i, assignment := range trainAssignments {
+		fmt.Printf("Train %d assigned to Path %d: %v\n", i+1, assignment+1, paths[assignment])
+	}
+	fmt.Println()
 
 	return trainAssignments
 }
@@ -431,20 +361,23 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 	numTrains := len(trainAssignments)
 	trainPositions := make([]int, numTrains)
 	stationQueues := make(map[string]*Queue)
+
+	// Initialize trains with colors
 	trains := make([]string, numTrains)
 	for i := 0; i < numTrains; i++ {
 		switch i % 4 {
 		case 0:
-			trains[i] = fmt.Sprintf("\033[31mT%d\033[0m", i+1)
+			trains[i] = fmt.Sprintf("\033[31mT%d\033[0m", i+1) // Red
 		case 1:
-			trains[i] = fmt.Sprintf("\033[33mT%d\033[0m", i+1)
+			trains[i] = fmt.Sprintf("\033[33mT%d\033[0m", i+1) // Yellow
 		case 2:
-			trains[i] = fmt.Sprintf("\033[34mT%d\033[0m", i+1)
+			trains[i] = fmt.Sprintf("\033[34mT%d\033[0m", i+1) // Blue
 		case 3:
-			trains[i] = fmt.Sprintf("\033[32mT%d\033[0m", i+1)
+			trains[i] = fmt.Sprintf("\033[32mT%d\033[0m", i+1) // Green
 		}
 	}
 
+	// Initialize train positions and station queues
 	for i := range trainPositions {
 		trainPositions[i] = 0
 		startStation := paths[trainAssignments[i]][0]
@@ -454,11 +387,13 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 		stationQueues[startStation].Push(i)
 	}
 
-	var steps int
+	// Main simulation loop
+	var steps int // Initialize steps counter
 	for steps = 0; ; steps++ {
 		var moveLine []string
 		allTrainsAtEnd := true
 
+		// Process each train
 		for i := 0; i < numTrains; i++ {
 			path := paths[trainAssignments[i]]
 			if trainPositions[i] < len(path)-1 {
@@ -466,7 +401,9 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 				currentStation := path[trainPositions[i]]
 				nextStation := path[trainPositions[i]+1]
 
+				// Check if this train is next in line at current station
 				if stationQueues[currentStation] != nil && stationQueues[currentStation].Front() == i {
+					// Check if next station is free from incoming trains
 					nextStationFree := true
 					if stationQueues[nextStation] != nil {
 						for _, trainIndex := range stationQueues[nextStation].items {
@@ -479,9 +416,12 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 
 					if nextStationFree {
 						moveLine = append(moveLine, fmt.Sprintf("%s-%s", trains[i], nextStation))
+
+						// Update train's position and station queues
 						trainPositions[i]++
 						stationQueues[currentStation].Pop()
 
+						// Remove train from current station queue when it reaches end station
 						if nextStation == path[len(path)-1] {
 							delete(stationQueues, nextStation)
 						} else {
@@ -495,23 +435,28 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 			}
 		}
 
+		// Print movements if there are any
 		if len(moveLine) > 0 {
 			fmt.Println(strings.Join(moveLine, " "))
 		}
 
+		// Break loop if all trains have reached their destination
 		if allTrainsAtEnd {
 			break
 		}
 
+		// Add a check to prevent potential infinite loops
 		if steps > 2*numTrains*len(paths[0]) {
 			fmt.Fprintln(os.Stderr, "Error: Simulation exceeded maximum steps, possible infinite loop detected")
 			return steps
 		}
 	}
 
+	// Print movements count
 	return steps
 }
 
+// Queue implementation for station queues
 type Queue struct {
 	items []int
 }

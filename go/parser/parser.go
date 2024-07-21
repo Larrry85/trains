@@ -1,9 +1,9 @@
-/*package parser
+package parser
 
 import (
 	"bufio"
 	"io"
-	"stations/pathfinder"
+	"stations/go/pathfinder"
 	"strings"
 )
 
@@ -29,4 +29,3 @@ func ParseConnections(r io.Reader) (pathfinder.Connections, error) {
 
 	return connections, nil
 }
-*/
