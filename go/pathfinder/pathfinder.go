@@ -4,8 +4,8 @@ import (
 	"container/heap"
 	"fmt"
 	"os"
-	"strings"
 	"stations/go/A"
+	"strings"
 )
 
 // Item represents an element in the priority queue with a value, priority, and index.
