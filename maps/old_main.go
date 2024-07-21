@@ -104,8 +104,6 @@ func main() {
 	// Simulate train movements across the shortest paths
 	totalMovements := simulateTrainMovements(shortestPaths, trainAssignments)
 
-	fmt.Printf("Trains: %d\n", len(trainAssignments))
-
 	// Print the total movements
 	fmt.Printf("Total Movements: %d\n", totalMovements)
 	fmt.Print("*************\n\n")
@@ -422,13 +420,8 @@ func (pq *priorityQueue) Pop() interface{} {
 func distributeTrainsInCycles(paths [][]string, numTrains int) []int {
 	numPaths := len(paths)
 	trainAssignments := make([]int, numTrains)
-
 	for i := 0; i < numTrains; i++ {
-		// Assign paths in a way to ensure adjacent paths are different
 		trainAssignments[i] = i % numPaths
-		if i > 0 && trainAssignments[i] == trainAssignments[i-1] {
-			trainAssignments[i] = (trainAssignments[i] + 1) % numPaths
-		}
 	}
 
 	return trainAssignments
@@ -439,8 +432,6 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 	trainPositions := make([]int, numTrains)
 	stationQueues := make(map[string]*Queue)
 	trains := make([]string, numTrains)
-	usedRoutes := make(map[int]struct{}) // To track unique routes used
-
 	for i := 0; i < numTrains; i++ {
 		switch i % 4 {
 		case 0:
@@ -499,9 +490,6 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 							}
 							stationQueues[nextStation].Push(i)
 						}
-
-						// Track the route used
-						usedRoutes[trainAssignments[i]] = struct{}{}
 					}
 				}
 			}
@@ -521,9 +509,6 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 		}
 	}
 
-	// Print the number of routes found, routes used, number of trains, and total movements
-	fmt.Printf("\nRoutes found: %d\n", len(paths))
-	fmt.Printf("Routes used: %d\n", len(usedRoutes))
 	return steps
 }
 
