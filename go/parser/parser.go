@@ -2,29 +2,147 @@ package parser
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"stations/go/pathfinder"
+	"strconv"
 	"strings"
+	"fmt"
 )
+
+type Station struct {
+	Name string
+	X    int
+	Y    int
+}
+
+type Connection struct {
+	Start string
+	End   string
+}
+
+type Connections []Connection
 
 func ParseConnections(r io.Reader) (pathfinder.Connections, error) {
 	scanner := bufio.NewScanner(r)
 	connections := pathfinder.Connections{}
+	stations := make(map[string]Station)
+	existingConnections := make(map[string]struct{})
+	stationsSectionExists := false
+	connectionsSectionExists := false
+	section := ""
+
+	stationCount := 0
+	connectionCount := 0
 
 	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Split(line, "-")
-		if len(parts) != 2 {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
 			continue
 		}
-		connections = append(connections, pathfinder.Connection{
-			Start: parts[0],
-			End:   parts[1],
-		})
+
+		if line == "stations:" {
+			section = "stations"
+			stationsSectionExists = true
+			continue
+		} else if line == "connections:" {
+			section = "connections"
+			connectionsSectionExists = true
+			continue
+		}
+
+		if section == "stations" {
+			parts := strings.Split(line, ",")
+			if len(parts) != 3 {
+				return nil, fmt.Errorf("invalid station line: %s", line)
+			}
+
+			name := strings.TrimSpace(parts[0])
+			x, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+			if err != nil || x < 0 {
+				return nil, fmt.Errorf("invalid x coordinate for station %s", name)
+			}
+			y, err := strconv.Atoi(strings.TrimSpace(parts[2]))
+			if err != nil || y < 0 {
+				return nil, fmt.Errorf("invalid y coordinate for station %s", name)
+			}
+
+			if _, exists := stations[name]; exists {
+				return nil, fmt.Errorf("duplicate station name: %s", name)
+			}
+			for _, station := range stations {
+				if station.X == x && station.Y == y {
+					return nil, fmt.Errorf("duplicate coordinates for station %s", name)
+				}
+			}
+
+			stations[name] = Station{Name: name, X: x, Y: y}
+			stationCount++
+		} else if section == "connections" {
+			parts := strings.Split(line, "-")
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("invalid connection line: %s", line)
+			}
+
+			from := strings.TrimSpace(parts[0])
+			to := strings.TrimSpace(parts[1])
+
+			if _, exists := stations[from]; !exists {
+				return nil, fmt.Errorf("connection from non-existent station: %s", from)
+			}
+			if _, exists := stations[to]; !exists {
+				return nil, fmt.Errorf("connection to non-existent station: %s", to)
+			}
+			if from == to {
+				return nil, fmt.Errorf("connection with same start and end station: %s", from)
+			}
+
+			connectionKey := from + "-" + to
+			reverseConnectionKey := to + "-" + from
+			if _, exists := existingConnections[connectionKey]; exists {
+				return nil, fmt.Errorf("duplicate connection between %s and %s", from, to)
+			}
+			if _, exists := existingConnections[reverseConnectionKey]; exists {
+				return nil, fmt.Errorf("duplicate connection between %s and %s", from, to)
+			}
+
+			existingConnections[connectionKey] = struct{}{}
+			existingConnections[reverseConnectionKey] = struct{}{}
+
+			connections = append(connections, pathfinder.Connection{
+				Start: from,
+				End:   to,
+			})
+			connectionCount++
+		}
+
+		if stationCount > 10000 {
+			return nil, errors.New("map contains more than 10000 stations")
+		}
+
+		if connectionCount > 10000 {
+			return nil, errors.New("map contains more than 10000 connections")
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		return nil, err
+	}
+
+	if !stationsSectionExists {
+		return nil, errors.New("map does not contain a \"stations:\" section")
+	}
+
+	if !connectionsSectionExists {
+		return nil, errors.New("map does not contain a \"connections:\" section")
+	}
+
+	if len(stations) == 0 {
+		return nil, errors.New("map does not contain any stations")
+	}
+
+	if len(connections) == 0 {
+		return nil, errors.New("map does not contain any connections")
 	}
 
 	return connections, nil
