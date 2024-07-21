@@ -47,7 +47,7 @@ func main() {
 
 	movements := pathfinder.ScheduleTrainMovements(startStation, endStation, connections, numTrains)
 
-	fmt.Println("Train movements:")
+	fmt.Print("\nTrain movements:\n\n")
 	for _, move := range movements {
 		fmt.Println(move)
 	}

@@ -347,39 +347,49 @@ func distributeTrainsInCycles(paths [][]string, numTrains int) []int {
 		trainAssignments[i] = i % numPaths
 	}
 
-	// Print the train assignments in cycles
+	/*/ Print the train assignments in cycles
 	fmt.Println("Train assignments in cycles:")
 	for i, assignment := range trainAssignments {
 		fmt.Printf("Train %d assigned to Path %d: %v\n", i+1, assignment+1, paths[assignment])
-	}
+	}*/
 	fmt.Println()
 
 	return trainAssignments
 }
 
+// Train represents a train with an ID and color.
+type Train struct {
+	ID    int
+	Color string
+}
+
+// simulateTrainMovements simulates the movements of trains and prints their paths.
 func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 	numTrains := len(trainAssignments)
 	trainPositions := make([]int, numTrains)
 	stationQueues := make(map[string]*Queue)
+	fmt.Print("Train movements:\n\n")
 
 	// Initialize trains with colors
-	trains := make([]string, numTrains)
+	trains := make([]Train, numTrains)
 	for i := 0; i < numTrains; i++ {
+		color := ""
 		switch i % 4 {
 		case 0:
-			trains[i] = fmt.Sprintf("\033[31mT%d\033[0m", i+1) // Red
+			color = "31" // Red
 		case 1:
-			trains[i] = fmt.Sprintf("\033[33mT%d\033[0m", i+1) // Yellow
+			color = "33" // Yellow
 		case 2:
-			trains[i] = fmt.Sprintf("\033[34mT%d\033[0m", i+1) // Blue
+			color = "34" // Blue
 		case 3:
-			trains[i] = fmt.Sprintf("\033[32mT%d\033[0m", i+1) // Green
+			color = "32" // Green
 		}
+		trains[i] = Train{ID: i + 1, Color: color}
+		trainPositions[i] = 0 // Initialize train positions
 	}
 
-	// Initialize train positions and station queues
-	for i := range trainPositions {
-		trainPositions[i] = 0
+	// Initialize station queues
+	for i := 0; i < numTrains; i++ {
 		startStation := paths[trainAssignments[i]][0]
 		if stationQueues[startStation] == nil {
 			stationQueues[startStation] = NewQueue()
@@ -401,9 +411,9 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 				currentStation := path[trainPositions[i]]
 				nextStation := path[trainPositions[i]+1]
 
-				// Check if this train is next in line at current station
+				// Check if this train is next in line at the current station
 				if stationQueues[currentStation] != nil && stationQueues[currentStation].Front() == i {
-					// Check if next station is free from incoming trains
+					// Check if the next station is free from incoming trains
 					nextStationFree := true
 					if stationQueues[nextStation] != nil {
 						for _, trainIndex := range stationQueues[nextStation].items {
@@ -415,13 +425,13 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 					}
 
 					if nextStationFree {
-						moveLine = append(moveLine, fmt.Sprintf("%s-%s", trains[i], nextStation))
+						moveLine = append(moveLine, fmt.Sprintf("\033[%smT%d\033[0m-%s", trains[i].Color, trains[i].ID, nextStation))
 
 						// Update train's position and station queues
 						trainPositions[i]++
 						stationQueues[currentStation].Pop()
 
-						// Remove train from current station queue when it reaches end station
+						// Remove train from the current station queue when it reaches the end station
 						if nextStation == path[len(path)-1] {
 							delete(stationQueues, nextStation)
 						} else {
@@ -451,7 +461,7 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 			return steps
 		}
 	}
-
+	fmt.Print("\n")
 	// Print movements count
 	return steps
 }
