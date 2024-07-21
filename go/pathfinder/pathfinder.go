@@ -3,6 +3,7 @@ package pathfinder
 import (
 	"container/heap"
 	"fmt"
+	"os"
 	"stations/go/A"
 	"strings"
 )
@@ -133,7 +134,7 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 
 	if len(connections) >= 20 {
 		A.PrintResult()
-		return nil
+		os.Exit(0)
 	}
 
 	var movements []string
@@ -248,15 +249,6 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 	return movements
 }
 
-// Helper function to flatten paths
-func flattenPaths(paths [][]string) [][]string {
-	var flatPaths [][]string
-	for _, path := range paths {
-		flatPaths = append(flatPaths, path) // Just append the path directly
-	}
-	return flatPaths
-}
-
 // FindAllPaths finds all possible paths from start to end.
 func FindAllPaths(start, end string, connections Connections) ([][]string, bool) {
 	adjacencyList := buildAdjacencyList(connections)
@@ -340,13 +332,4 @@ func allTrainsReachedEnd(trainPositions map[string]string, end string) bool {
 		}
 	}
 	return true
-}
-
-func buildGraph(connections Connections) map[string][]string {
-	graph := make(map[string][]string)
-	for _, conn := range connections {
-		graph[conn.Start] = append(graph[conn.Start], conn.End)
-		graph[conn.End] = append(graph[conn.End], conn.Start) // If undirected
-	}
-	return graph
 }

@@ -206,7 +206,7 @@ func read(filePath string) (*Graph, error) {
 // find routes using A* algorithm
 func Paths(start, end string, graph map[string][]string) [][]string {
 
-	numberOfPaths := 2
+	numberOfPaths := 4
 	trains := make([][]*Node, numberOfPaths)
 
 	remainingPaths := numberOfPaths

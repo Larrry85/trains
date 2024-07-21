@@ -57,15 +57,6 @@ func main() {
 		return
 	}
 
-	movements := pathfinder.ScheduleTrainMovements(startStation, endStation, connections, numTrains)
-
-	fmt.Println("Train movements:")
-	for _, move := range movements {
-		fmt.Println(move)
-	}
-
-	fmt.Printf("\nTotal number of movements: %d\n", len(movements))
-	fmt.Print("********************\n\n")
 }
 
 func readMap(filePath string) (pathfinder.Connections, error) {

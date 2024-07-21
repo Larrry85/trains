@@ -271,15 +271,15 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 		}
 	}
 
-	return movements
-}
+	fmt.Println("Train movements:")
+	for _, move := range movements {
+		fmt.Println(move)
+	}
 
-/* Helper function to flatten paths
-func flattenPaths(paths [][]string) [][]string {
-	var flatPaths [][]string
-	flatPaths = append(flatPaths, paths...) // Append all paths directly
-	return flatPaths
-}*/
+	fmt.Printf("\nTotal number of movements: %d\n", len(movements))
+	fmt.Print("********************\n\n")
+	return
+}
 
 // FindAllPaths finds all possible paths from start to end.
 func FindAllPaths(start, end string, connections Connections) ([][]string, bool) {
