@@ -246,10 +246,48 @@ func readMap(filePath string) (*Graph, error) {
 }
 
 func findShortestPaths(graph *Graph, start, end string) [][]string {
+<<<<<<< HEAD:maps/old_main.go
 	if len(graph.connections) > 6 {
 		return findPathsAStar(graph, start, end)
 	}
 	return findPathsDijkstra(graph, start, end)
+=======
+
+	result1 := findPathsAStar(graph, start, end)
+	result2 := findPathsDijkstra(graph, start, end)
+	result3 := findPathsLimitedMoves(graph, start, end, 8)
+	// Find the shortest path length in result1
+	shortest1 := len(result1[0])
+	for _, path := range result1 {
+		if len(path) < shortest1 {
+			shortest1 = len(path)
+		}
+	}
+
+	// Find the shortest path length in result2
+	shortest2 := len(result2[0])
+	for _, path := range result2 {
+		if len(path) < shortest2 {
+			shortest2 = len(path)
+		}
+	}
+
+	shortest3 := len(result3[0])
+	for _, path := range result3 {
+		if len(path) < shortest3 {
+			shortest3 = len(path)
+		}
+	}
+
+	// Compare the shortest path lengths
+	if shortest1 <= shortest2 && shortest1 <= shortest3 {
+		return result3
+	} else if shortest2 <= shortest1 && shortest2 <= shortest3 {
+		return result3
+	}
+	fmt.Println("mfklsdmfgösdg")
+	return result3
+>>>>>>> origin/dahl:old_main.go
 }
 
 func findPathsAStar(graph *Graph, start, end string) [][]string {
@@ -545,4 +583,64 @@ func (q *Queue) Remove(val int) {
 			return
 		}
 	}
+}
+
+func findPathsLimitedMoves(graph *Graph, start, end string, maxMovements int) [][]string {
+	var result [][]string
+
+	// Initialize the queue with the starting point
+	type Path struct {
+		nodes     []*Node
+		movements int
+	}
+	queue := []Path{{nodes: []*Node{{Station: start}}, movements: 0}}
+	visited := make(map[string]bool)
+
+	for len(queue) > 0 {
+		currentPath := queue[0]
+		queue = queue[1:]
+
+		lastNode := currentPath.nodes[len(currentPath.nodes)-1]
+		if lastNode.Station == end && currentPath.movements <= maxMovements {
+			route := make([]string, len(currentPath.nodes))
+			for i, node := range currentPath.nodes {
+				route[i] = node.Station
+			}
+			result = append(result, route)
+			continue
+		}
+
+		if currentPath.movements >= maxMovements {
+			continue
+		}
+
+		for _, neighbor := range graph.connections[lastNode.Station] {
+			newPath := Path{
+				nodes:     append([]*Node(nil), currentPath.nodes...), // Copy the slice
+				movements: currentPath.movements + 1,
+			}
+			newPath.nodes = append(newPath.nodes, &Node{Station: neighbor})
+			stateIdentifier := generateStateIdentifier(newPath.nodes)
+
+			if !visited[stateIdentifier] {
+				visited[stateIdentifier] = true
+				queue = append(queue, newPath)
+			}
+		}
+	}
+
+	if len(result) == 0 {
+		fmt.Println("Error: No path exists between the start and end stations.")
+	}
+
+	return result
+}
+
+func generateStateIdentifier(nodes []*Node) string {
+	var identifier strings.Builder
+	for _, node := range nodes {
+		identifier.WriteString(node.Station)
+		identifier.WriteString("-")
+	}
+	return identifier.String()
 }

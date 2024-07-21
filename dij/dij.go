@@ -1,9 +1,8 @@
-package pathfinder
+package dij
 
 import (
 	"container/heap"
 	"fmt"
-
 	"strings"
 )
 
@@ -77,20 +76,7 @@ func buildAdjacencyList(connections Connections) map[string]map[string]int {
 	return adjacencyList
 }
 
-/*/ Convert adjacencyList to map[string][]string
-func convertAdjacencyList(adjacencyList map[string]map[string]int) map[string][]string {
-	convertedAdjacencyList := make(map[string][]string)
-	for station, neighbors := range adjacencyList {
-		convertedAdjacencyList[station] = make([]string, 0, len(neighbors))
-		for neighbor := range neighbors {
-			convertedAdjacencyList[station] = append(convertedAdjacencyList[station], neighbor)
-		}
-	}
-	return convertedAdjacencyList
-}*/
-
-// FindShortestPath finds the fastest path from start to end using Dijkstra's algorithm.
-func FindShortestPath(start, end string, connections Connections) ([]string, bool) {
+func ShortestPath(start string, end string, connections Connections) [][]string {
 	// Initialize variables for Dijkstra's algorithm
 	adjacencyList := buildAdjacencyList(connections)
 	pq := make(PriorityQueue, 0)
@@ -111,6 +97,8 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 
 	visited := make(map[string]bool)
 
+	var shortestPaths [][]string
+
 	for pq.Len() > 0 {
 		currentItem := heap.Pop(&pq).(*Item)
 		currentStation := currentItem.value
@@ -121,7 +109,8 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 			for at := end; at != ""; at = previous[at] {
 				path = append([]string{at}, path...)
 			}
-			return path, true
+			shortestPaths = append(shortestPaths, path)
+			continue // Continue to find other shortest paths
 		}
 
 		if visited[currentStation] {
@@ -145,11 +134,9 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 		}
 	}
 
-	// If no path found
-	return nil, false
+	return shortestPaths
 }
 
-// ScheduleTrainMovements schedules the movements of multiple trains from start to end.
 func ScheduleTrainMovements(start, end string, connections Connections, numTrains int) []string {
 	// Convert Connections to a graph representation
 	//graph := buildGraph(connections)
@@ -175,7 +162,7 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 	}
 
 	// Precompute the fastest path using Dijkstra's algorithm
-	fpath, _ := FindShortestPath(start, end, connections)
+	fpath := ShortestPath(start, end, connections)
 
 	step := 0
 	maxSteps := 10000 // Limit steps to avoid infinite loop
@@ -202,9 +189,9 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 				}
 
 				if step == 0 && i == 0 {
-					path = fpath
+					path = fpath[0] // Use the first path from fpath
 				} else if i == len(trains)-1 && reachedDestinationOr1TurnAway && len(fpath) == 2 {
-					path = fpath
+					path = fpath[0] // Use the first path from fpath
 				} else {
 					// Find all possible paths from current position to end
 					allPaths, found := FindAllPaths(trainPositions[train], end, connections)
@@ -225,10 +212,10 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 								}
 							}
 							if nextOccupied[p[1]] == 0 && !contains(p[1:], start) && !isDuplicate && isGood {
-								if len(p) > len(fpath)+2 {
-									if contains(fpath, trainPositions[train]) {
-										ind := slicesIndex(fpath, trainPositions[train])
-										path = fpath[ind:]
+								if len(p) > len(fpath[0])+2 {
+									if contains(fpath[0], trainPositions[train]) {
+										ind := slicesIndex(fpath[0], trainPositions[train])
+										path = fpath[0][ind:]
 									}
 								} else {
 									path = p

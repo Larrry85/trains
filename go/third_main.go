@@ -258,40 +258,35 @@ func distributeTrains(paths [][]string, numTrains int) []int {
 func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 	numTrains := len(trainAssignments)
 	trainPositions := make([]int, numTrains)
-	stationQueues := make(map[string]*list.List)
-
-	// Initialize trains with colors
+	stationQueues := make(map[string]*Queue)
 	trains := make([]string, numTrains)
 	for i := 0; i < numTrains; i++ {
 		switch i % 4 {
 		case 0:
-			trains[i] = fmt.Sprintf("\033[31mT%d\033[0m", i+1) // Red
+			trains[i] = fmt.Sprintf("\033[31mT%d\033[0m", i+1)
 		case 1:
-			trains[i] = fmt.Sprintf("\033[33mT%d\033[0m", i+1) // Yellow
+			trains[i] = fmt.Sprintf("\033[33mT%d\033[0m", i+1)
 		case 2:
-			trains[i] = fmt.Sprintf("\033[34mT%d\033[0m", i+1) // Blue
+			trains[i] = fmt.Sprintf("\033[34mT%d\033[0m", i+1)
 		case 3:
-			trains[i] = fmt.Sprintf("\033[32mT%d\033[0m", i+1) // Green
+			trains[i] = fmt.Sprintf("\033[32mT%d\033[0m", i+1)
 		}
 	}
 
-	// Initialize train positions and station queues
 	for i := range trainPositions {
 		trainPositions[i] = 0
 		startStation := paths[trainAssignments[i]][0]
 		if stationQueues[startStation] == nil {
-			stationQueues[startStation] = list.New()
+			stationQueues[startStation] = NewQueue()
 		}
-		stationQueues[startStation].PushBack(i)
+		stationQueues[startStation].Push(i)
 	}
 
-	// Main simulation loop
-	var steps int // Initialize steps counter
+	var steps int
 	for steps = 0; ; steps++ {
 		var moveLine []string
 		allTrainsAtEnd := true
 
-		// Process each train
 		for i := 0; i < numTrains; i++ {
 			path := paths[trainAssignments[i]]
 			if trainPositions[i] < len(path)-1 {
@@ -299,13 +294,11 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 				currentStation := path[trainPositions[i]]
 				nextStation := path[trainPositions[i]+1]
 
-				// Check if this train is next in line at current station
-				if stationQueues[currentStation] != nil && stationQueues[currentStation].Front().Value.(int) == i {
-					// Check if next station is free from incoming trains
+				if stationQueues[currentStation] != nil && stationQueues[currentStation].Front() == i {
 					nextStationFree := true
 					if stationQueues[nextStation] != nil {
-						for e := stationQueues[nextStation].Front(); e != nil; e = e.Next() {
-							if trainPositions[e.Value.(int)] == trainPositions[i]+1 {
+						for _, trainIndex := range stationQueues[nextStation].items {
+							if trainPositions[trainIndex] == trainPositions[i]+1 {
 								nextStationFree = false
 								break
 							}
@@ -314,44 +307,35 @@ func simulateTrainMovements(paths [][]string, trainAssignments []int) int {
 
 					if nextStationFree {
 						moveLine = append(moveLine, fmt.Sprintf("%s-%s", trains[i], nextStation))
-
-						// Update train's position and station queues
 						trainPositions[i]++
-						stationQueues[currentStation].Remove(stationQueues[currentStation].Front())
+						stationQueues[currentStation].Pop()
 
-						// Remove train from current station queue when it reaches end station
 						if nextStation == path[len(path)-1] {
-							if stationQueues[nextStation] != nil {
-								stationQueues[nextStation].Remove(stationQueues[nextStation].Front())
-							}
+							delete(stationQueues, nextStation)
 						} else {
 							if stationQueues[nextStation] == nil {
-								stationQueues[nextStation] = list.New()
+								stationQueues[nextStation] = NewQueue()
 							}
-							stationQueues[nextStation].PushBack(i)
+							stationQueues[nextStation].Push(i)
 						}
 					}
 				}
 			}
 		}
 
-		// Print movements if there are any
 		if len(moveLine) > 0 {
 			fmt.Println(strings.Join(moveLine, " "))
 		}
 
-		// Break loop if all trains have reached their destination
 		if allTrainsAtEnd {
 			break
 		}
 
-		// Add a check to prevent potential infinite loops
 		if steps > 2*numTrains*len(paths[0]) {
 			fmt.Fprintln(os.Stderr, "Error: Simulation exceeded maximum steps, possible infinite loop detected")
 			return steps
 		}
 	}
 
-	// Print movements count
 	return steps
 }

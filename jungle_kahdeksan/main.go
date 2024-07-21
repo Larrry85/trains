@@ -2,14 +2,15 @@
 package main
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"os"
-	"taskfive/pathfinder"
-	"errors"
-	"bufio"
-	"strings"
+	"stations/pathfinder"
 	"strconv"
+	"strings"
 )
+
 type Station struct {
 	name string
 	x, y int
@@ -214,7 +215,6 @@ func readMap(filePath string) (pathfinder.Connections, error) {
 
 	return connections, nil
 }
-
 
 func isValidStation(connections pathfinder.Connections, station string) bool {
 	for _, connection := range connections {
