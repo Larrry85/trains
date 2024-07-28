@@ -3,30 +3,18 @@ package parser
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
-	"stations/go/pathfinder"
+	"os"
+	network "stations/go/network/dijkstra"
 	"strconv"
 	"strings"
-	"fmt"
 )
 
-type Station struct {
-	Name string
-	X    int
-	Y    int
-}
-
-type Connection struct {
-	Start string
-	End   string
-}
-
-type Connections []Connection
-
-func ParseConnections(r io.Reader) (pathfinder.Connections, error) {
+func ParseConnections(r io.Reader) (network.Connections, error) {
 	scanner := bufio.NewScanner(r)
-	connections := pathfinder.Connections{}
-	stations := make(map[string]Station)
+	connections := network.Connections{}
+	stations := make(map[string]network.Station)
 	existingConnections := make(map[string]struct{})
 	stationsSectionExists := false
 	connectionsSectionExists := false
@@ -76,7 +64,7 @@ func ParseConnections(r io.Reader) (pathfinder.Connections, error) {
 				}
 			}
 
-			stations[name] = Station{Name: name, X: x, Y: y}
+			stations[name] = network.Station{Name: name, X: x, Y: y}
 			stationCount++
 		} else if section == "connections" {
 			parts := strings.Split(line, "-")
@@ -87,10 +75,12 @@ func ParseConnections(r io.Reader) (pathfinder.Connections, error) {
 			from := strings.TrimSpace(parts[0])
 			to := strings.TrimSpace(parts[1])
 
-			if _, exists := stations[from]; !exists {
+			startStation, exists := stations[from]
+			if !exists {
 				return nil, fmt.Errorf("connection from non-existent station: %s", from)
 			}
-			if _, exists := stations[to]; !exists {
+			endStation, exists := stations[to]
+			if !exists {
 				return nil, fmt.Errorf("connection to non-existent station: %s", to)
 			}
 			if from == to {
@@ -109,9 +99,9 @@ func ParseConnections(r io.Reader) (pathfinder.Connections, error) {
 			existingConnections[connectionKey] = struct{}{}
 			existingConnections[reverseConnectionKey] = struct{}{}
 
-			connections = append(connections, pathfinder.Connection{
-				Start: from,
-				End:   to,
+			connections = append(connections, network.Connection{
+				Start: startStation,
+				End:   endStation,
 			})
 			connectionCount++
 		}
@@ -146,4 +136,14 @@ func ParseConnections(r io.Reader) (pathfinder.Connections, error) {
 	}
 
 	return connections, nil
+}
+
+func ReadMap(filePath string) (network.Connections, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	return ParseConnections(file)
 }

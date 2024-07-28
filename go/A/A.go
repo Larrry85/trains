@@ -7,91 +7,10 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	astar "stations/go/network/astar"
 	"strconv"
 	"strings"
 )
-
-type PriorityQueue []*Node
-
-type Node struct {
-	Station  string
-	Cost     int
-	Priority int
-	Parent   *Node
-	Time     int
-}
-
-type Station struct {
-	name string
-	x, y int
-}
-
-type Graph struct {
-	stations    map[string]Station
-	connections map[string][]string
-}
-
-// Implement heap.Interface for PriorityQueue
-func (pq PriorityQueue) Len() int { return len(pq) }
-func (pq PriorityQueue) Less(i, j int) bool {
-	return pq[i].Priority < pq[j].Priority
-}
-func (pq PriorityQueue) Swap(i, j int) {
-	pq[i], pq[j] = pq[j], pq[i]
-}
-func (pq *PriorityQueue) Push(x interface{}) {
-	node := x.(*Node)
-	*pq = append(*pq, node)
-}
-func (pq *PriorityQueue) Pop() interface{} {
-	old := *pq
-	n := len(old)
-	node := old[n-1]
-	*pq = old[0 : n-1]
-	return node
-}
-
-// Train represents a train with an ID and color.
-type Train struct {
-	ID    int
-	Color string
-}
-
-// Queue implementation for station queues with string support
-type StringQueue struct {
-	items []string
-}
-
-func NewStringQueue() *StringQueue {
-	return &StringQueue{items: []string{}}
-}
-
-func (q *StringQueue) Push(item string) {
-	q.items = append(q.items, item)
-}
-
-func (q *StringQueue) Pop() {
-	if len(q.items) == 0 {
-		return
-	}
-	q.items = q.items[1:]
-}
-
-func (q *StringQueue) Front() string {
-	if len(q.items) == 0 {
-		return ""
-	}
-	return q.items[0]
-}
-
-func (q *StringQueue) Remove(val string) {
-	for i := 0; i < len(q.items); i++ {
-		if q.items[i] == val {
-			q.items = append(q.items[:i], q.items[i+1:]...)
-			return
-		}
-	}
-}
 
 // PrintResult processes input and runs the simulation
 func PrintResult() {
@@ -133,16 +52,16 @@ func PrintResult() {
 }
 
 // Read the input file and create a graph
-func read(filePath string) (*Graph, error) {
+func read(filePath string) (*astar.Graph, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	graph := &Graph{
-		stations:    make(map[string]Station),
-		connections: make(map[string][]string),
+	graph := &astar.Graph{
+		Stations:    make(map[string]astar.Station),
+		Connections: make(map[string][]string),
 	}
 
 	existingConnections := make(map[string]struct{})
@@ -189,17 +108,21 @@ func read(filePath string) (*Graph, error) {
 				return nil, fmt.Errorf("invalid y coordinate for station %s", name)
 			}
 
-			if _, exists := graph.stations[name]; exists {
+			if _, exists := graph.Stations[name]; exists {
 				return nil, fmt.Errorf("duplicate station name: %s", name)
 			}
 
-			for _, station := range graph.stations {
-				if station.x == x && station.y == y {
+			for _, station := range graph.Stations {
+				if station.X == x && station.Y == y {
 					return nil, fmt.Errorf("duplicate coordinates for station %s", name)
 				}
 			}
 
-			graph.stations[name] = Station{name, x, y}
+			graph.Stations[name] = astar.Station{
+				Name: name,
+				X:    x,
+				Y:    y,
+			}
 			stationCount++
 		} else if section == "connections" {
 			// Process connection line
@@ -211,11 +134,11 @@ func read(filePath string) (*Graph, error) {
 			from := strings.TrimSpace(parts[0])
 			to := strings.TrimSpace(parts[1])
 
-			if _, exists := graph.stations[from]; !exists {
+			if _, exists := graph.Stations[from]; !exists {
 				return nil, fmt.Errorf("connection from non-existent station: %s", from)
 			}
 
-			if _, exists := graph.stations[to]; !exists {
+			if _, exists := graph.Stations[to]; !exists {
 				return nil, fmt.Errorf("connection to non-existent station: %s", to)
 			}
 
@@ -235,8 +158,8 @@ func read(filePath string) (*Graph, error) {
 			existingConnections[connectionKey] = struct{}{}
 			existingConnections[reverseConnectionKey] = struct{}{}
 
-			graph.connections[from] = append(graph.connections[from], to)
-			graph.connections[to] = append(graph.connections[to], from)
+			graph.Connections[from] = append(graph.Connections[from], to)
+			graph.Connections[to] = append(graph.Connections[to], from)
 			connectionCount++
 		}
 
@@ -262,11 +185,11 @@ func read(filePath string) (*Graph, error) {
 		return nil, errors.New("map does not contain a \"connections:\" section")
 	}
 
-	if len(graph.stations) == 0 {
+	if len(graph.Stations) == 0 {
 		return nil, errors.New("map does not contain any stations")
 	}
 
-	if len(graph.connections) == 0 {
+	if len(graph.Connections) == 0 {
 		return nil, errors.New("map does not contain any connections")
 	}
 
@@ -274,13 +197,13 @@ func read(filePath string) (*Graph, error) {
 }
 
 // Find distinct paths between start and end
-func findDistinctPaths(start, end string, graph *Graph, maxPaths int) [][]string {
+func findDistinctPaths(start, end string, graph *astar.Graph, maxPaths int) [][]string {
 	paths := [][]string{}
 	usedStations := make(map[string]struct{})
 	allPaths := [][]string{}
 
 	for len(paths) < maxPaths {
-		path := aStarPathfinding(start, end, graph.connections, usedStations)
+		path := aStarPathfinding(start, end, graph.Connections, usedStations)
 
 		if len(path) == 0 {
 			break
@@ -311,19 +234,12 @@ func findDistinctPaths(start, end string, graph *Graph, maxPaths int) [][]string
 	return paths
 }
 
-/*/ Heuristic function for A* (Euclidean distance)
-func heuristic(station1, station2 Station) float64 {
-	dx := float64(station1.x - station2.x)
-	dy := float64(station1.y - station2.y)
-	return dx*dx + dy*dy
-}*/
-
 // A* pathfinding algorithm to find the optimal path
 func aStarPathfinding(start, end string, connections map[string][]string, usedStations map[string]struct{}) []string {
 	// Initialize the priority queue
-	pq := &PriorityQueue{}
+	pq := &astar.PriorityQueue{}
 	heap.Init(pq)
-	heap.Push(pq, &Node{Station: start, Cost: 0, Priority: 0})
+	heap.Push(pq, &astar.Node{Station: start, Cost: 0, Priority: 0})
 
 	// Map to keep track of the costs
 	costSoFar := make(map[string]int)
@@ -333,7 +249,7 @@ func aStarPathfinding(start, end string, connections map[string][]string, usedSt
 	parentMap := make(map[string]string)
 
 	for pq.Len() > 0 {
-		currentNode := heap.Pop(pq).(*Node)
+		currentNode := heap.Pop(pq).(*astar.Node)
 		current := currentNode.Station
 
 		// If we reached the goal, reconstruct the path
@@ -363,7 +279,7 @@ func aStarPathfinding(start, end string, connections map[string][]string, usedSt
 			if oldCost, ok := costSoFar[neighbor]; !ok || newCost < oldCost {
 				costSoFar[neighbor] = newCost
 				priority := newCost
-				heap.Push(pq, &Node{Station: neighbor, Cost: newCost, Priority: priority})
+				heap.Push(pq, &astar.Node{Station: neighbor, Cost: newCost, Priority: priority})
 				parentMap[neighbor] = current
 			}
 		}
@@ -409,7 +325,7 @@ func distributeTrainsAcrossPaths(paths [][]string, numTrains int) map[int]int {
 func simulateTrainMovements(paths [][]string, trainAssignments map[int]int, startStation, endStation string) int {
 	totalMovements := 0
 	numTrains := len(trainAssignments)
-	trains := make([]Train, numTrains)
+	trains := make([]astar.Train, numTrains)
 	positions := make([]int, numTrains)
 	completed := make([]bool, numTrains)
 	trainLog := make([][]string, 0)
@@ -417,7 +333,7 @@ func simulateTrainMovements(paths [][]string, trainAssignments map[int]int, star
 
 	// Initialize trains
 	for i := 0; i < numTrains; i++ {
-		trains[i] = Train{ID: i, Color: "red"}
+		trains[i] = astar.Train{ID: i, Color: "red"}
 		occupiedStations[startStation]++
 	}
 

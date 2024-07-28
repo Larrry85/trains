@@ -10001,6 +10001,7 @@ station9999,9999,9999
 station10000,10000,10000
 
 
+
 connections:
 station1-station2
 station2-station3
@@ -20001,4 +20002,3 @@ station9996-station9997
 station9997-station9998
 station9998-station9999
 station9999-station10000
-

@@ -3,93 +3,50 @@ package pathfinder
 import (
 	"container/heap"
 	"fmt"
+	"math"
 	"os"
 	"stations/go/A"
+	network "stations/go/network/dijkstra"
 	"strings"
 )
 
-// Item represents an element in the priority queue with a value, priority, and index.
-type Item struct {
-	value    string
-	priority int
-	index    int
-}
-
-// PriorityQueue implements a priority queue using a slice of Items.
-type PriorityQueue []*Item
-
-// Len returns the length of the priority queue.
-func (pq PriorityQueue) Len() int { return len(pq) }
-
-// Less returns true if the priority of item i is less than the priority of item j.
-func (pq PriorityQueue) Less(i, j int) bool {
-	return pq[i].priority < pq[j].priority
-}
-
-// Swap swaps the elements with indexes i and j in the priority queue.
-func (pq PriorityQueue) Swap(i, j int) {
-	pq[i], pq[j] = pq[j], pq[i]
-	pq[i].index = i
-	pq[j].index = j
-}
-
-// Push adds an item x to the priority queue.
-func (pq *PriorityQueue) Push(x interface{}) {
-	n := len(*pq)
-	item := x.(*Item)
-	item.index = n
-	*pq = append(*pq, item)
-}
-
-// Pop removes and returns the item with the highest priority from the priority queue.
-func (pq *PriorityQueue) Pop() interface{} {
-	old := *pq
-	n := len(old)
-	item := old[n-1]
-	old[n-1] = nil // Avoid memory leak
-	item.index = -1
-	*pq = old[0 : n-1]
-	return item
-}
-
-// Connection represents a connection between two stations with a travel time.
-type Connection struct {
-	Start string
-	End   string
-	Time  int
-}
-
-// Connections is a slice of Connection.
-type Connections []Connection
-
-// Train represents a train with an ID and color.
-type Train struct {
-	ID    int
-	Color string
+func Heurestic(s1, s2 network.Station) int {
+	dx := s1.X - s2.X
+	dy := s1.Y - s2.Y
+	return int(math.Sqrt(float64(dx*dx + dy*dy)))
 }
 
 // buildAdjacencyList builds an adjacency list from connections with travel times.
-func buildAdjacencyList(connections Connections) map[string]map[string]int {
+func buildAdjacencyList(connections network.Connections) map[string]map[string]int {
 	adjacencyList := make(map[string]map[string]int)
+
 	for _, connection := range connections {
-		if adjacencyList[connection.Start] == nil {
-			adjacencyList[connection.Start] = make(map[string]int)
+		startName := connection.Start.Name
+		endName := connection.End.Name
+		travelTime := Heurestic(connection.Start, connection.End)
+
+		// Initialize maps for start and end if they don't already exist
+		if _, exists := adjacencyList[startName]; !exists {
+			adjacencyList[startName] = make(map[string]int)
 		}
-		if adjacencyList[connection.End] == nil {
-			adjacencyList[connection.End] = make(map[string]int)
+		if _, exists := adjacencyList[endName]; !exists {
+			adjacencyList[endName] = make(map[string]int)
 		}
-		adjacencyList[connection.Start][connection.End] = connection.Time
-		adjacencyList[connection.End][connection.Start] = connection.Time
+
+		// Update adjacency list with travel time
+		adjacencyList[startName][endName] = travelTime
+		adjacencyList[endName][startName] = travelTime
 	}
+
 	return adjacencyList
 }
 
 // FindShortestPath finds the fastest path from start to end using Dijkstra's algorithm.
-func FindShortestPath(start, end string, connections Connections) ([]string, bool) {
+func FindShortestPath(start, end string, connections network.Connections) ([]string, bool) {
 	adjacencyList := buildAdjacencyList(connections)
-	pq := make(PriorityQueue, 0)
+	pq := make(network.PriorityQueue, 0)
 	heap.Init(&pq)
-	heap.Push(&pq, &Item{value: start, priority: 0})
+	heap.Push(&pq, &network.Item{Value: start, Priority: 0}) // Updated field names
 
 	distances := make(map[string]int)
 	previous := make(map[string]string)
@@ -103,8 +60,8 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 	visited := make(map[string]bool)
 
 	for pq.Len() > 0 {
-		currentItem := heap.Pop(&pq).(*Item)
-		currentStation := currentItem.value
+		currentItem := heap.Pop(&pq).(*network.Item)
+		currentStation := currentItem.Value // Updated field name
 
 		if currentStation == end {
 			path := []string{}
@@ -127,7 +84,7 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 			if newDist < distances[neighbor] {
 				distances[neighbor] = newDist
 				previous[neighbor] = currentStation
-				heap.Push(&pq, &Item{value: neighbor, priority: newDist})
+				heap.Push(&pq, &network.Item{Value: neighbor, Priority: newDist}) // Updated field names
 			}
 		}
 	}
@@ -135,8 +92,7 @@ func FindShortestPath(start, end string, connections Connections) ([]string, boo
 	return nil, false
 }
 
-// ScheduleTrainMovements schedules the movements of multiple trains from start to end.
-func ScheduleTrainMovements(start, end string, connections Connections, numTrains int) []string {
+func ScheduleTrainMovements(start, end string, connections network.Connections, numTrains int) []string {
 
 	if len(connections) >= 20 {
 		A.PrintResult()
@@ -145,7 +101,7 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 
 	var movements []string
 	occupied := make(map[string]int)
-	trains := make([]Train, numTrains)
+	trains := make([]network.Train, numTrains)
 	trainPositions := make(map[int]string)
 
 	// Initialize trains and their positions with colors
@@ -161,18 +117,18 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 		case 3:
 			color = "32" // Green
 		}
-		trains[i] = Train{ID: i + 1, Color: color}
+		trains[i] = network.Train{ID: i + 1, Color: color}
 		trainPositions[i+1] = start
 	}
 
-	// Precompute the fastest path using Dijkstra's algorithm
-	fpath, _ := FindShortestPath(start, end, connections)
+	var fpath []string
+
+	fpath, _ = FindShortestPath(start, end, connections) // Use Dijkstra's algorithm
 
 	step := 0
 	maxSteps := 10000 // Limit steps to avoid infinite loop
 
 	for !allTrainsReachedEnd(trainPositions, end) && step < maxSteps {
-
 		trainsPaths := make(map[int][]string)
 		var moves []string
 		nextOccupied := make(map[string]int)
@@ -267,7 +223,7 @@ func ScheduleTrainMovements(start, end string, connections Connections, numTrain
 }
 
 // FindAllPaths finds all possible paths from start to end.
-func FindAllPaths(start, end string, connections Connections) ([][]string, bool) {
+func FindAllPaths(start, end string, connections network.Connections) ([][]string, bool) {
 	adjacencyList := buildAdjacencyList(connections)
 	var paths [][]string
 	queue := [][]string{{start}}

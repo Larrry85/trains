@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
-
+	network "stations/go/network/dijkstra"
 	"stations/go/parser"
 	"stations/go/pathfinder"
+
 	"strconv"
 )
 
@@ -24,7 +25,7 @@ func main() {
 		return
 	}
 
-	connections, err := readMap(filePath)
+	connections, err := parser.ReadMap(filePath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
 		return
@@ -47,7 +48,7 @@ func main() {
 
 	movements := pathfinder.ScheduleTrainMovements(startStation, endStation, connections, numTrains)
 
-	fmt.Print("\nTrain movements:\n\n")
+	fmt.Println("Train movements:")
 	for _, move := range movements {
 		fmt.Println(move)
 	}
@@ -56,21 +57,13 @@ func main() {
 	fmt.Println("***********")
 }
 
-func readMap(filePath string) (pathfinder.Connections, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	return parser.ParseConnections(file)
-}
-
-func isValidStation(connections pathfinder.Connections, station string) bool {
+func isValidStation(connections network.Connections, station string) bool {
+	// Create a map of station names for quick lookup
+	stationNames := make(map[string]struct{})
 	for _, connection := range connections {
-		if connection.Start == station || connection.End == station {
-			return true
-		}
+		stationNames[connection.Start.Name] = struct{}{}
+		stationNames[connection.End.Name] = struct{}{}
 	}
-	return false
+	_, exists := stationNames[station]
+	return exists
 }
