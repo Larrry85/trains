@@ -30,7 +30,9 @@ Test text file of incorrect cases is found in the maps/errors directory (tests_e
 
 ### Directory tree and explanations of the GO files
 
+```
 stations/
+│
 ├── go/
 │   ├── A/
 │   │   └── A.go
@@ -49,7 +51,8 @@ stations/
 │       └── tests_errors.txt               
 ├── go.mod 
 ├── main.go
-└── README.md                
+└── README.md
+```               
 
 main.go:
 - Validates input arguments.
