@@ -46,9 +46,10 @@ stations/
 │   └── pathfinder/
 │   │   └── pathfinder.go
 ├── maps/
-│   ├── tests.txt
-│   └── errors/  
-│       └── tests_errors.txt               
+│   ├── errors/
+│   │   └── tests_errors.txt  
+│   └── tests.txt  
+             
 ├── go.mod 
 ├── main.go
 └── README.md
