@@ -32,22 +32,12 @@ func PrintResult() {
 	// Get distinct paths
 	paths := findDistinctPaths(startStation, endStation, graph, maxPaths)
 
-	if len(paths) == 0 {
-		fmt.Println("No paths found")
-		return
-	}
-
 	// Distribute trains across paths
 	trainAssignments := distributeTrainsAcrossPaths(paths, numTrains)
 
-	// Print the paths
-	fmt.Println("paths: ", paths)
-
 	// Simulate train movements
-	total := simulateTrainMovements(paths, trainAssignments, startStation, endStation)
+	simulateTrainMovements(paths, trainAssignments, startStation, endStation)
 
-	// Print the total movements
-	fmt.Printf("\nMovements: %d\n", total)
 	fmt.Println("*******************")
 }
 
@@ -333,7 +323,18 @@ func simulateTrainMovements(paths [][]string, trainAssignments map[int]int, star
 
 	// Initialize trains
 	for i := 0; i < numTrains; i++ {
-		trains[i] = astar.Train{ID: i, Color: "red"}
+		color := ""
+		switch i % 4 {
+		case 0:
+			color = "31" // Red
+		case 1:
+			color = "33" // Yellow
+		case 2:
+			color = "34" // Blue
+		case 3:
+			color = "32" // Green
+		}
+		trains[i] = astar.Train{ID: i + 1, Color: color}
 		occupiedStations[startStation]++
 	}
 
@@ -361,7 +362,8 @@ func simulateTrainMovements(paths [][]string, trainAssignments map[int]int, star
 					}
 					positions[i]++
 					occupiedStations[nextStation]++
-					turnLog = append(turnLog, fmt.Sprintf("T%d-%s", i+1, nextStation))
+					// Append the train movement with color
+					turnLog = append(turnLog, fmt.Sprintf("\033[%smT%d-%s\033[0m", trains[i].Color, trains[i].ID, nextStation))
 					totalMovements++
 					allArrived = false
 
@@ -380,13 +382,13 @@ func simulateTrainMovements(paths [][]string, trainAssignments map[int]int, star
 	}
 
 	// Print the train movements
-	fmt.Println("\nTrain movements:")
+	fmt.Println("Train movements:")
 	for _, turn := range trainLog {
 		fmt.Println(strings.Join(turn, " "))
 	}
 
 	// Print the number of turns
-	fmt.Printf("\nNumber of lines (turns): %d\n", len(trainLog))
+	fmt.Printf("\nTotal Movements: %d\n", len(trainLog))
 
 	return totalMovements
 }
