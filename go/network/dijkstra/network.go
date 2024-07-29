@@ -1,3 +1,4 @@
+//network.go
 package network
 
 // Station represents a station with an X, Y coordinate.
