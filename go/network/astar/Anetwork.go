@@ -1,3 +1,4 @@
+//Anetwork.go
 package astar
 
 type PriorityQueue []*Node
@@ -9,6 +10,17 @@ type Node struct {
 	Parent   *Node
 	Time     int
 }
+
+/*
+Here's an example to illustrate the relationship:
+
+    Station: Represents a point on the map (e.g., "StationA" at coordinates (1, 2)).
+    Node: Represents the state of the algorithm's search process at "StationA", 
+	including the cost to get there, the priority for further exploration, the 
+	parent node, and possibly the time taken.
+    Train: Represents an entity moving through the network of stations, potentially
+	 using the path found by the A* algorithm.
+*/
 
 type Station struct {
 	Name string

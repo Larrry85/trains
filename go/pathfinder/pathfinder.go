@@ -1,3 +1,4 @@
+//pathfinder.go
 package pathfinder
 
 import (

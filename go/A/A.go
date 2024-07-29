@@ -1,3 +1,4 @@
+// A.go
 package A
 
 import (
@@ -38,7 +39,7 @@ func PrintResult() {
 	// Simulate train movements
 	simulateTrainMovements(paths, trainAssignments, startStation, endStation)
 
-	fmt.Println("*******************")
+	fmt.Println("******************************************")
 }
 
 // Read the input file and create a graph
@@ -380,9 +381,11 @@ func simulateTrainMovements(paths [][]string, trainAssignments map[int]int, star
 			break
 		}
 	}
-
+	filePath := os.Args[1]
 	// Print the train movements
-	fmt.Println("Train movements:")
+	fmt.Print("\nTrain movements from\033[1m ", filePath)
+	fmt.Print("\n\033[0m")
+	fmt.Print("\033[4m", startStation, "\033[0m to \033[4m", endStation, "\033[0m with \033[4m", numTrains, "\033[0m trains:\n\n")
 	for _, turn := range trainLog {
 		fmt.Println(strings.Join(turn, " "))
 	}

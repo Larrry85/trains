@@ -1,3 +1,4 @@
+//main.go
 package main
 
 import (
@@ -48,13 +49,15 @@ func main() {
 
 	movements := pathfinder.ScheduleTrainMovements(startStation, endStation, connections, numTrains)
 
-	fmt.Println("Train movements:")
+	fmt.Print("\nTrain movements from\033[1m ", filePath)
+	fmt.Print("\n\033[0m")
+	fmt.Print("\033[4m", startStation, "\033[0m to \033[4m", endStation, "\033[0m with \033[4m", numTrains, "\033[0m trains:\n\n")
 	for _, move := range movements {
 		fmt.Println(move)
 	}
 
 	fmt.Printf("\nTotal Movements: %d\n", len(movements))
-	fmt.Println("***********")
+	fmt.Println("******************************************")
 }
 
 func isValidStation(connections network.Connections, station string) bool {
