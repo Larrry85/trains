@@ -30,20 +30,26 @@ Test text file of incorrect cases is found in the maps/errors directory (tests_e
 
 ### Directory tree and explanations of the GO files
 
-stations
+stations/
+├── go/
+│   ├── A/
+│   │   └── A.go
+│   ├── network/
+│   │   ├── astar/
+│   │   │   └── Anetwork.go
+│   │   └── dijkstra/
+│   │       └── network.go
+│   ├── parser/
+│   │   └── parser.go
+│   └── pathfinder/
+│   │   └── pathfinder.go
+├── maps/
+│   ├── tests.txt
+│   └── errors/  
+│       └── tests_errors.txt               
+├── go.mod 
 ├── main.go
-└── go
-├── A
-│ └── A.go
-├── network
-│ ├── astar
-│ │ └── Anetwork.go
-│ └── dijkstra
-│ └── network.go
-├── parser
-│ └── parser.go
-└── pathfinder
-└── pathfinder.go
+└── README.md                
 
 main.go:
 - Validates input arguments.
@@ -76,7 +82,6 @@ pathfinder.go:
 - Heurestic() calculates the Euclidean distance between two stations, (heuristic in pathfinding).
 - buildAdjacencyList() converts a list of connections into an adjacency list representation, mapping each station to its neighboring stations with travel times.
 - ScheduleTrainMovements() simulates train movements from start to end station using, for example, Dijkstra algorithm.
-
 
 ## Coders
 
