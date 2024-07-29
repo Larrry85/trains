@@ -48,8 +48,7 @@ stations/
 ├── maps/
 │   ├── errors/
 │   │   └── tests_errors.txt  
-│   └── tests.txt  
-             
+│   └── tests.txt              
 ├── go.mod 
 ├── main.go
 └── README.md
