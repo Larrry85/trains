@@ -33,17 +33,17 @@ Test text file of incorrect cases is found in the maps/errors directory (tests_e
 stations
 ├── main.go
 └── go
-    ├── A
-    │   └── A.go
-    ├── network
-    │   ├── astar
-    │   │   └── Anetwork.go
-    │   └── dijkstra
-    │       └── network.go
-    ├── parser
-    │   └── parser.go
-    └── pathfinder
-        └── pathfinder.go
+├── A
+│ └── A.go
+├── network
+│ ├── astar
+│ │ └── Anetwork.go
+│ └── dijkstra
+│ └── network.go
+├── parser
+│ └── parser.go
+└── pathfinder
+└── pathfinder.go
 
 main.go:
 - Validates input arguments.
