@@ -28,7 +28,7 @@ go run . maps/errors/10no-start-station_london.txt waterloo victoria 4
 ```
 Test text file of incorrect cases is found in the maps/errors directory (tests_errors.txt).
 
-### Directory tree and explanations of the GO files
+## Directory tree and explanations of the GO files
 
 ```
 stations/
