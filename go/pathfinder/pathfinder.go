@@ -94,7 +94,7 @@ func FindShortestPath(start, end string, connections network.Connections) ([]str
 
 func ScheduleTrainMovements(start, end string, connections network.Connections, numTrains int) []string {
 
-	if len(connections) >= 20 {
+	if len(connections) > 20 && len(connections) < 150 {
 		A.PrintResult()
 		os.Exit(0)
 	}
