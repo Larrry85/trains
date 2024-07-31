@@ -25,7 +25,7 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 	connectionCount := 0
 
 	// Define regex for station name validation
-	nameRegex := regexp.MustCompile(`^[a-z]+$`)
+	nameRegex := regexp.MustCompile(`^[a-z0-9_]+$`)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
