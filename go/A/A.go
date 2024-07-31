@@ -296,6 +296,14 @@ func distributeTrainsAcrossPaths(paths [][]string, numTrains int) map[int]int {
 	secondShortestPathIndex := 1
 	longestPathIndex := len(paths) - 1
 
+	// Ensure we have enough paths
+	if len(paths) < 2 {
+		secondShortestPathIndex = 0
+	}
+	if len(paths) < 3 {
+		longestPathIndex = 0
+	}
+
 	// Assign trains
 	for i := 0; i < numTrains; i++ {
 		switch {
@@ -305,12 +313,16 @@ func distributeTrainsAcrossPaths(paths [][]string, numTrains int) map[int]int {
 			trainAssignments[i] = secondShortestPathIndex
 		case i < 9:
 			trainAssignments[i] = longestPathIndex
+		default:
+			// Assign remaining trains to the shortest path if no other option
+			trainAssignments[i] = shortestPathIndex
 		}
 		pathUsageCount[trainAssignments[i]]++
 	}
 
 	return trainAssignments
 }
+
 
 // Simulate train movements on given paths
 func simulateTrainMovements(paths [][]string, trainAssignments map[int]int, startStation, endStation string) int {
@@ -339,6 +351,10 @@ func simulateTrainMovements(paths [][]string, trainAssignments map[int]int, star
 		occupiedStations[startStation]++
 	}
 
+	/*/ Debug: Print the paths and train assignments
+	fmt.Println("Paths:", paths)
+	fmt.Println("Train Assignments:", trainAssignments)*/
+
 	// Simulate movements
 	for {
 		allArrived := true
@@ -349,6 +365,10 @@ func simulateTrainMovements(paths [][]string, trainAssignments map[int]int, star
 			}
 
 			pathIndex := trainAssignments[i]
+			if pathIndex >= len(paths) || pathIndex < 0 {
+				fmt.Fprintf(os.Stderr, "Error: Invalid path index %d for train %d\n", pathIndex, i)
+				return -1
+			}
 			path := paths[pathIndex]
 
 			// Check if the next position is free
@@ -381,6 +401,7 @@ func simulateTrainMovements(paths [][]string, trainAssignments map[int]int, star
 			break
 		}
 	}
+
 	filePath := os.Args[1]
 	// Print the train movements
 	fmt.Print("\nTrain movements from\033[1m ", filePath)

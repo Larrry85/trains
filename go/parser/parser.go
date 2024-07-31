@@ -12,8 +12,10 @@ import (
 	"strings"
 )
 
+// ParseConnections parses the connections from the reader
 func ParseConnections(r io.Reader) (network.Connections, error) {
 	scanner := bufio.NewScanner(r)
+	connectionsForStations := make(map[string]bool)
 	stationsSectionExists := false
 	connectionsSectionExists := false
 
@@ -143,6 +145,8 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 				Start: startStation,
 				End:   endStation,
 			})
+			connectionsForStations[from] = true // Mark that this station has a connection
+			connectionsForStations[to] = true 
 			connectionCount++
 		}
 
@@ -165,6 +169,13 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 
 	if len(connections) == 0 {
 		return nil, errors.New("map does not contain any connections")
+	}
+
+	// Check if every station has at least one connection
+	for station, hasConnection := range connectionsForStations {
+		if !hasConnection {
+			return nil, fmt.Errorf("no connection from station: %s", station)
+		}
 	}
 
 	return connections, nil
