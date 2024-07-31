@@ -14,11 +14,45 @@ import (
 
 func ParseConnections(r io.Reader) (network.Connections, error) {
 	scanner := bufio.NewScanner(r)
+	stationsSectionExists := false
+	connectionsSectionExists := false
+
+	// First pass to check for sections
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "stations:" {
+			stationsSectionExists = true
+		} else if line == "connections:" {
+			connectionsSectionExists = true
+		}
+		if stationsSectionExists && connectionsSectionExists {
+			break
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	if !stationsSectionExists {
+		return nil, errors.New("map does not contain a \"stations:\" section")
+	}
+
+	if !connectionsSectionExists {
+		return nil, errors.New("map does not contain a \"connections:\" section")
+	}
+
+	// Reset the scanner for the second pass
+	if seeker, ok := r.(io.Seeker); ok {
+		seeker.Seek(0, io.SeekStart)
+		scanner = bufio.NewScanner(r)
+	} else {
+		return nil, errors.New("reader does not support seeking")
+	}
+
 	connections := network.Connections{}
 	stations := make(map[string]network.Station)
 	existingConnections := make(map[string]struct{})
-	stationsSectionExists := false
-	connectionsSectionExists := false
 	section := ""
 
 	stationCount := 0
@@ -35,11 +69,9 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 
 		if line == "stations:" {
 			section = "stations"
-			stationsSectionExists = true
 			continue
 		} else if line == "connections:" {
 			section = "connections"
-			connectionsSectionExists = true
 			continue
 		}
 
@@ -75,10 +107,6 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 			stations[name] = network.Station{Name: name, X: x, Y: y}
 			stationCount++
 		} else if section == "connections" {
-			if !stationsSectionExists {
-				return nil, errors.New("map does not contain a \"stations:\" section")
-			}
-
 			parts := strings.Split(line, "-")
 			if len(parts) != 2 {
 				return nil, fmt.Errorf("invalid connection line: %s", line)
@@ -129,14 +157,6 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 
 	if err := scanner.Err(); err != nil {
 		return nil, err
-	}
-
-	if !stationsSectionExists {
-		return nil, errors.New("map does not contain a \"stations:\" section")
-	}
-
-	if !connectionsSectionExists {
-		return nil, errors.New("map does not contain a \"connections:\" section")
 	}
 
 	if len(stations) == 0 {
