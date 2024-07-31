@@ -42,6 +42,7 @@ func main() {
 		return
 	}
 
+
 	if startStation == endStation {
 		fmt.Fprintln(os.Stderr, "Error: Start and end station cannot be the same")
 		return

@@ -17,6 +17,7 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 	connections := network.Connections{}
 	stations := make(map[string]network.Station)
 	existingConnections := make(map[string]struct{})
+	connectionsForStations := make(map[string]bool)
 	stationsSectionExists := false
 	connectionsSectionExists := false
 	section := ""
@@ -66,6 +67,7 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 			}
 
 			stations[name] = network.Station{Name: name, X: x, Y: y}
+			connectionsForStations[name] = false 
 			stationCount++
 		} else if section == "connections" {
 			parts := strings.Split(line, "-")
@@ -104,6 +106,8 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 				Start: startStation,
 				End:   endStation,
 			})
+			connectionsForStations[from] = true // Mark that this station has a connection
+			connectionsForStations[to] = true   // Mark that this station has a connection
 			connectionCount++
 		}
 
@@ -134,6 +138,13 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 
 	if len(connections) == 0 {
 		return nil, errors.New("map does not contain any connections")
+	}
+
+	// Check if every station has at least one connection
+	for station, hasConnection := range connectionsForStations {
+		if !hasConnection {
+			return nil, fmt.Errorf("no connection from station: %s", station)
+		}
 	}
 
 	return connections, nil
