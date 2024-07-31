@@ -1,4 +1,4 @@
-//main.go
+// main.go
 package main
 
 import (
@@ -37,13 +37,14 @@ func main() {
 		return
 	}
 
-	if !isValidStation(connections, endStation) {
-		fmt.Fprintln(os.Stderr, "Error: End station does not exist")
+	if startStation == endStation {
+		fmt.Fprintln(os.Stderr, "Error: Start and end station cannot be the same")
 		return
 	}
 
-	if startStation == endStation {
-		fmt.Fprintln(os.Stderr, "Error: Start and end station cannot be the same")
+	// Check for path existence before scheduling train movements
+	if _, err := pathfinder.FindShortestPath(startStation, endStation, connections); err != nil {
+		fmt.Fprintln(os.Stderr, "Error:", err)
 		return
 	}
 

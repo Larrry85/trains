@@ -1,4 +1,3 @@
-//parser.go
 package parser
 
 import (
@@ -7,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	network "stations/go/network/dijkstra"
 	"strconv"
 	"strings"
@@ -23,6 +23,9 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 
 	stationCount := 0
 	connectionCount := 0
+
+	// Define regex for station name validation
+	nameRegex := regexp.MustCompile(`^[a-z]+$`)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -47,6 +50,10 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 			}
 
 			name := strings.TrimSpace(parts[0])
+			if !nameRegex.MatchString(name) {
+				return nil, fmt.Errorf("invalid station name: %s", name)
+			}
+
 			x, err := strconv.Atoi(strings.TrimSpace(parts[1]))
 			if err != nil || x < 0 {
 				return nil, fmt.Errorf("invalid x coordinate for station %s", name)
@@ -68,6 +75,10 @@ func ParseConnections(r io.Reader) (network.Connections, error) {
 			stations[name] = network.Station{Name: name, X: x, Y: y}
 			stationCount++
 		} else if section == "connections" {
+			if !stationsSectionExists {
+				return nil, errors.New("map does not contain a \"stations:\" section")
+			}
+
 			parts := strings.Split(line, "-")
 			if len(parts) != 2 {
 				return nil, fmt.Errorf("invalid connection line: %s", line)

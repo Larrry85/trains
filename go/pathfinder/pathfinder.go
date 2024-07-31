@@ -1,4 +1,4 @@
-//pathfinder.go
+// pathfinder.go
 package pathfinder
 
 import (
@@ -42,12 +42,11 @@ func buildAdjacencyList(connections network.Connections) map[string]map[string]i
 	return adjacencyList
 }
 
-// FindShortestPath finds the fastest path from start to end using Dijkstra's algorithm.
-func FindShortestPath(start, end string, connections network.Connections) ([]string, bool) {
+func FindShortestPath(start, end string, connections network.Connections) ([]string, error) {
 	adjacencyList := buildAdjacencyList(connections)
 	pq := make(network.PriorityQueue, 0)
 	heap.Init(&pq)
-	heap.Push(&pq, &network.Item{Value: start, Priority: 0}) // Updated field names
+	heap.Push(&pq, &network.Item{Value: start, Priority: 0})
 
 	distances := make(map[string]int)
 	previous := make(map[string]string)
@@ -62,14 +61,14 @@ func FindShortestPath(start, end string, connections network.Connections) ([]str
 
 	for pq.Len() > 0 {
 		currentItem := heap.Pop(&pq).(*network.Item)
-		currentStation := currentItem.Value // Updated field name
+		currentStation := currentItem.Value
 
 		if currentStation == end {
 			path := []string{}
 			for at := end; at != ""; at = previous[at] {
 				path = append([]string{at}, path...)
 			}
-			return path, true
+			return path, nil
 		}
 
 		if visited[currentStation] {
@@ -85,12 +84,12 @@ func FindShortestPath(start, end string, connections network.Connections) ([]str
 			if newDist < distances[neighbor] {
 				distances[neighbor] = newDist
 				previous[neighbor] = currentStation
-				heap.Push(&pq, &network.Item{Value: neighbor, Priority: newDist}) // Updated field names
+				heap.Push(&pq, &network.Item{Value: neighbor, Priority: newDist})
 			}
 		}
 	}
 
-	return nil, false
+	return nil, fmt.Errorf("no path found between %s and %s", start, end)
 }
 
 func ScheduleTrainMovements(start, end string, connections network.Connections, numTrains int) []string {
