@@ -19,6 +19,8 @@ go run . maps/01london.txt waterloo st_pancras 2
  ```
 Text file of correct test cases is found in the maps directory (tests.txt). 
 
+![Screenshot](trains.png)
+
 ### Invalid maps
 
 There are maps that contain errors, for example:
