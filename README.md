@@ -90,4 +90,5 @@ pathfinder.go:
 
 ## Coders
 
-Laura Levistö - Jonathan Dahl - 7/24
+Laura Levistö - Jonathan Dahl       
+7/24
